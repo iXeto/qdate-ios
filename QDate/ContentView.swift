@@ -1081,18 +1081,8 @@ struct ActiveSearchView: View {
     @EnvironmentObject private var store: DemoStore
 
     var body: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 14) {
             ReadinessCard()
-
-            HStack {
-                Text("Swipe date ideas")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(.white)
-                Spacer()
-                GlassIconButton(symbol: "slider.horizontal.3") {
-                    store.showFilters = true
-                }
-            }
 
             ExperienceSwipeDeck()
 
@@ -1112,61 +1102,42 @@ struct ReadinessCard: View {
     @EnvironmentObject private var store: DemoStore
 
     var body: some View {
-        GlassCard(cornerRadius: 24) {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Match readiness")
-                            .font(.system(size: 17, weight: .bold))
-                            .foregroundStyle(.white)
-                        Text("QDate learns from date ideas, not chat noise.")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(QTheme.muted)
-                    }
-                    Spacer()
-                    Text("\(Int(store.readinessScore))%")
-                        .font(.system(size: 28, weight: .heavy))
-                        .foregroundStyle(QTheme.electric)
-                }
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Text("Match readiness")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(.white)
 
-                GeometryReader { proxy in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(Color.white.opacity(0.10))
-                        Capsule()
-                            .fill(QTheme.violet)
-                            .frame(width: proxy.size.width * max(0.04, store.readinessScore / 100))
-                            .shadow(color: QTheme.violet.opacity(0.45), radius: 10)
-                    }
-                }
-                .frame(height: 10)
+                Spacer()
 
-                HStack(spacing: 8) {
-                    MetricPill(value: "\(store.likedExperienceIDs.count)", label: "liked")
-                    MetricPill(value: "\(store.dislikedExperienceIDs.count)", label: "skipped")
-                    MetricPill(value: store.hasEnoughSignal ? "ready" : "learning", label: "status")
+                Text("\(Int(store.readinessScore))%")
+                    .font(.system(size: 28, weight: .heavy))
+                    .foregroundStyle(QTheme.electric)
+
+                Button {
+                    store.showFilters = true
+                } label: {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(QTheme.muted)
+                        .frame(width: 34, height: 34)
+                        .background(Color.white.opacity(0.08), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Date filters")
+            }
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.white.opacity(0.10))
+                    Capsule()
+                        .fill(QTheme.violet)
+                        .frame(width: proxy.size.width * max(0.04, store.readinessScore / 100))
+                        .shadow(color: QTheme.violet.opacity(0.45), radius: 10)
                 }
             }
-            .padding(18)
+            .frame(height: 10)
         }
-    }
-}
-
-struct MetricPill: View {
-    let value: String
-    let label: String
-
-    var body: some View {
-        VStack(spacing: 2) {
-            Text(value)
-                .font(.system(size: 14, weight: .bold))
-            Text(label)
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(Color.white.opacity(0.58))
-        }
-        .foregroundStyle(.white)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 9)
-        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
@@ -2693,9 +2664,15 @@ struct FilterSheet: View {
         ZStack {
             AppBackground()
             VStack(alignment: .leading, spacing: 16) {
-                Text("Date filters")
-                    .font(.system(size: 30, weight: .semibold, design: .serif))
-                    .foregroundStyle(.white)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Date filters")
+                        .font(.system(size: 30, weight: .semibold, design: .serif))
+                        .foregroundStyle(.white)
+
+                    Text("\(store.likedExperienceIDs.count) liked · \(store.dislikedExperienceIDs.count) skipped")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(QTheme.muted)
+                }
 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 20) {
