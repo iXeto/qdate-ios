@@ -2912,9 +2912,15 @@ struct ExperienceDetailSheet: View {
                         .frame(height: 220)
                         .overlay {
                             if let imageName = experience.backgroundImageName {
-                                Image(imageName)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
+                                GeometryReader { geo in
+                                    Image(imageName)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
+                                        .offset(y: -geo.size.height * 0.12)
+                                        .frame(width: geo.size.width, height: geo.size.height)
+                                        .clipped()
+                                }
                             } else {
                                 Image(systemName: experience.symbol)
                                     .font(.system(size: 96, weight: .thin))
