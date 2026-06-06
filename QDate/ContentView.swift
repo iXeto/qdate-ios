@@ -119,6 +119,7 @@ struct DateExperience: Identifiable, Equatable {
     let id: String
     let title: String
     let category: String
+    let activity: String
     let location: String
     let budget: String
     let description: String
@@ -135,11 +136,13 @@ struct DateExperience: Identifiable, Equatable {
         description: String,
         symbol: String,
         colors: [Color],
+        activity: String? = nil,
         backgroundImageName: String? = nil
     ) {
         self.id = id
         self.title = title
         self.category = category
+        self.activity = activity ?? category
         self.location = location
         self.budget = budget
         self.description = description
@@ -314,6 +317,7 @@ final class DemoStore: ObservableObject {
     @Published var selectedExperienceIndex = 0
     @Published var likedExperienceIDs: Set<String> = []
     @Published var dislikedExperienceIDs: Set<String> = []
+    @Published private(set) var totalSwipeCount = 0
     @Published var selectedTimeSlotIDs: Set<UUID> = []
     @Published var appliedBudgetTiers: Set<String> = Set(DateFilterCatalog.tiers)
     @Published var appliedFilterCategories: Set<String> = Set(DateFilterCatalog.allCategories)
@@ -321,9 +325,7 @@ final class DemoStore: ObservableObject {
     @Published var selectedGender = "Women"
     @Published var minAge = 25.0
     @Published var maxAge = 34.0
-    @Published var autosaveEnabled = true
     @Published var notificationsEnabled = true
-    @Published var backupContact = "Text me first"
     @Published var showFilters = false
     @Published var showExperienceDetails: DateExperience?
     @Published var showTimeCoordination = false
@@ -459,54 +461,51 @@ final class DemoStore: ObservableObject {
             backgroundImageName: "CardBackgrounds/Matcha Date"
         ),
         DateExperience(
-            id: "jazz",
-            title: "Listening Room",
-            category: "Theatre",
-            location: "St. Pauli",
-            budget: "Premium",
-            description: "A quiet jazz set, two reserved seats, and a short walk after the encore.",
-            symbol: "music.mic",
-            colors: [Color(red: 0.30, green: 0.12, blue: 0.92), Color(red: 0.95, green: 0.20, blue: 0.62)]
-        ),
-        DateExperience(
-            id: "wine",
-            title: "Natural Wine Hour",
-            category: "Other",
-            location: "Schanze",
-            budget: "Medium",
-            description: "A small table, one guided flight, and conversation prompts that do not feel forced.",
-            symbol: "wineglass",
-            colors: [Color(red: 0.57, green: 0.13, blue: 0.72), Color(red: 0.18, green: 0.60, blue: 0.88)]
-        ),
-        DateExperience(
-            id: "harbor",
-            title: "Harbor Glow Walk",
-            category: "Nature experience",
-            location: "HafenCity",
-            budget: "Light",
-            description: "A scenic route, warm drinks, and one good place to stop if the chemistry is there.",
-            symbol: "water.waves",
-            colors: [Color(red: 0.05, green: 0.20, blue: 0.60), Color(red: 0.48, green: 0.21, blue: 1.0)]
-        ),
-        DateExperience(
-            id: "chef",
-            title: "Counter Dinner",
+            id: "go-karting",
+            title: "Race each other on the track",
             category: "Action",
-            location: "Eimsbuettel",
+            location: "Kart track in Hamburg",
             budget: "Premium",
-            description: "Two seats at the chef counter where the plan feels special without becoming stiff.",
-            symbol: "fork.knife",
-            colors: [Color(red: 0.18, green: 0.07, blue: 0.28), Color(red: 0.93, green: 0.39, blue: 0.28)]
+            description: "You meet for go karting and race a few rounds against each other. Speed, curves, and a bit of friendly competition make the meetup feel more exciting than a normal indoor activity.",
+            symbol: "flag.checkered",
+            colors: [Color(red: 0.10, green: 0.10, blue: 0.12), Color(red: 0.92, green: 0.14, blue: 0.20)],
+            activity: "Go karting",
+            backgroundImageName: "CardBackgrounds/Karting_HH"
         ),
         DateExperience(
-            id: "gallery",
-            title: "After-Hours Gallery",
+            id: "miniatur-wunderland",
+            title: "Tiny worlds in Speicherstadt",
             category: "Museums",
-            location: "Altona",
+            location: "Miniatur Wunderland",
+            budget: "Premium",
+            description: "You explore Miniatur Wunderland together and move through detailed miniature landscapes from Hamburg to places around the world. There is so much to spot that the meetup naturally stays light, curious, and full of small discoveries.",
+            symbol: "globe.europe.africa.fill",
+            colors: [Color(red: 0.52, green: 0.22, blue: 0.16), Color(red: 0.10, green: 0.30, blue: 0.58)],
+            activity: "Visit to Miniatur Wunderland",
+            backgroundImageName: "CardBackgrounds/Miniatur_Wonderland"
+        ),
+        DateExperience(
+            id: "ferry-62",
+            title: "Mini cruise on ferry 62",
+            category: "Sightseeing",
+            location: "Landungsbrücken",
             budget: "Medium",
-            description: "A compact exhibition, one shared favorite piece, and a reservation nearby.",
-            symbol: "photo.artframe",
-            colors: [Color(red: 0.11, green: 0.32, blue: 0.68), Color(red: 0.76, green: 0.35, blue: 0.96)]
+            description: "You ride ferry 62 together across the Elbe and experience Hamburg from the water. The route passes the harbor, cranes, and Elbe views, turning a simple meetup into a small Hamburg experience.",
+            symbol: "ferry.fill",
+            colors: [Color(red: 0.12, green: 0.38, blue: 0.62), Color(red: 0.22, green: 0.52, blue: 0.78)],
+            activity: "Ferry ride on the Elbe"
+        ),
+        DateExperience(
+            id: "board-game-cafe",
+            title: "Board game café date",
+            category: "Other",
+            location: "Würfel & Zucker",
+            budget: "Medium",
+            description: "You meet at Würfel & Zucker and choose a board game to play together. The café setting, little challenges, and playful moments make it easy to spend time together without a stiff date feeling.",
+            symbol: "dice.fill",
+            colors: [Color(red: 0.42, green: 0.28, blue: 0.18), Color(red: 0.62, green: 0.38, blue: 0.22)],
+            activity: "Board game café",
+            backgroundImageName: "CardBackgrounds/Brettspiel_Cafe"
         )
     ]
 
@@ -542,9 +541,11 @@ final class DemoStore: ObservableObject {
         withAnimation(.easeInOut(duration: 0.6)) {
             likedExperienceIDs.removeAll()
             dislikedExperienceIDs.removeAll()
+            totalSwipeCount = 0
             selectedExperienceIndex = 0
             readinessScore = 42
             stage = .activeSearch
+            selectedTimeSlotIDs.removeAll()
         }
         Haptics.success()
     }
@@ -564,16 +565,14 @@ final class DemoStore: ObservableObject {
         weeklyAvailability.removeAll { $0.weekday == weekday }
     }
 
-    var hasEnoughSignal: Bool {
-        likedExperienceIDs.count + dislikedExperienceIDs.count >= 3 || readinessScore >= 76
-    }
-
     var isCompassLocked: Bool {
         stage != .activeSearch && stage != .matchFound
     }
 
     func swipeCurrent(liked: Bool) {
+        guard stage == .activeSearch else { return }
         guard let experience = currentExperience else { return }
+
         if liked {
             likedExperienceIDs.insert(experience.id)
             Haptics.success()
@@ -581,9 +580,22 @@ final class DemoStore: ObservableObject {
             dislikedExperienceIDs.insert(experience.id)
             Haptics.light()
         }
+
+        totalSwipeCount += 1
+        let shouldBeginMatchFlow = totalSwipeCount >= 4
+
         withAnimation(.easeInOut(duration: 0.6)) {
             readinessScore = min(100, readinessScore + (liked ? 13 : 8))
-            selectedExperienceIndex += 1
+            if !filteredExperiences.isEmpty {
+                selectedExperienceIndex = min(
+                    selectedExperienceIndex + 1,
+                    filteredExperiences.count - 1
+                )
+            }
+        }
+
+        if shouldBeginMatchFlow {
+            beginMatchFlow()
         }
     }
 
@@ -593,6 +605,11 @@ final class DemoStore: ObservableObject {
             stage = .matchFound
         }
         Haptics.success()
+    }
+
+    func beginMatchFlow() {
+        guard stage == .activeSearch else { return }
+        revealMatch()
     }
 
     func openTimeCoordination() {
@@ -1052,11 +1069,16 @@ struct HomeScreen: View {
     @EnvironmentObject private var store: DemoStore
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 18) {
-                switch store.stage {
-                case .activeSearch:
-                    ActiveSearchView()
+        ScrollViewReader { proxy in
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 18) {
+                    switch store.stage {
+                    case .activeSearch:
+                        ActiveSearchView {
+                            withAnimation(.easeInOut(duration: 0.45)) {
+                                proxy.scrollTo("improveMatchReadiness", anchor: .top)
+                            }
+                        }
                 case .matchFound, .timeCoordinationOpen:
                     MatchCockpit()
                 case .userVotedWaiting:
@@ -1069,53 +1091,57 @@ struct HomeScreen: View {
                     DatePlanReadyView()
                 }
             }
-            .padding(.horizontal, 18)
-            .padding(.top, 18)
-            .padding(.bottom, 96)
+                .padding(.horizontal, 18)
+                .padding(.top, 18)
+                .padding(.bottom, 96)
+            }
         }
     }
 }
 
 struct ActiveSearchView: View {
     @EnvironmentObject private var store: DemoStore
+    let scrollToImproveReadiness: () -> Void
 
     var body: some View {
         VStack(spacing: 14) {
-            ReadinessCard()
+            ReadinessCard(onTap: scrollToImproveReadiness)
                 .padding(.bottom, 20)
 
             ExperienceSwipeDeck()
 
-            if store.hasEnoughSignal {
-                ProfileQuestionStack()
-                GlassButton(title: "Reveal Curated Match", symbol: "heart.circle.fill", prominent: true) {
-                    store.revealMatch()
-                }
-            } else {
-                GuidanceTasks()
-            }
+            GuidanceTasks()
+                .id("improveMatchReadiness")
         }
     }
 }
 
 struct ReadinessCard: View {
     @EnvironmentObject private var store: DemoStore
+    let onTap: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
-                Text("Match readiness")
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(.white)
+                Button(action: onTap) {
+                    HStack(spacing: 10) {
+                        Text("Match readiness")
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundStyle(.white)
 
-                Spacer()
+                        Spacer()
 
-                Text("\(Int(store.readinessScore))%")
-                    .font(.system(size: 28, weight: .heavy))
-                    .foregroundStyle(QTheme.electric)
-                    .monospacedDigit()
-                    .contentTransition(.numericText(value: store.readinessScore))
-                    .animation(.easeInOut(duration: 0.6), value: store.readinessScore)
+                        Text("\(Int(store.readinessScore))%")
+                            .font(.system(size: 28, weight: .heavy))
+                            .foregroundStyle(QTheme.electric)
+                            .monospacedDigit()
+                            .contentTransition(.numericText(value: store.readinessScore))
+                            .animation(.easeInOut(duration: 0.6), value: store.readinessScore)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Match readiness, scroll to improvement tips")
 
                 Button {
                     store.showFilters = true
@@ -1130,8 +1156,13 @@ struct ReadinessCard: View {
                 .accessibilityLabel("Date filters")
             }
 
-            ReadinessProgressBar(progress: store.readinessScore)
-                .frame(height: 10)
+            Button(action: onTap) {
+                ReadinessProgressBar(progress: store.readinessScore)
+                    .frame(height: 10)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Match readiness progress, scroll to improvement tips")
         }
     }
 }
@@ -1255,7 +1286,7 @@ struct ExperienceCard: View {
 
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    Label(experience.category, systemImage: "sparkle")
+                    Label(experience.activity, systemImage: "sparkle")
                     Spacer()
                     Text(experience.budget)
                 }
@@ -1817,13 +1848,6 @@ struct CompassScreen: View {
 
                 PreferenceSection(title: "Weekly availability", locked: store.isCompassLocked) {
                     WeeklyAvailabilityEditor(locked: store.isCompassLocked)
-                }
-
-                PreferenceSection(title: "Safety and planning", locked: false) {
-                    ChipPicker(options: ["Text me first", "Share itinerary", "Call backup"], selection: $store.backupContact, locked: false)
-                    Toggle("Autosave preference changes", isOn: $store.autosaveEnabled)
-                        .tint(QTheme.violet)
-                        .foregroundStyle(.white)
                 }
             }
             .padding(.horizontal, 18)
@@ -2678,7 +2702,7 @@ struct FilterSheet: View {
     }
 
     private var swipeCount: Int {
-        store.likedExperienceIDs.count + store.dislikedExperienceIDs.count
+        store.totalSwipeCount
     }
 
     private var hasSwipeProgress: Bool {
@@ -2694,7 +2718,7 @@ struct FilterSheet: View {
                         .font(.system(size: 30, weight: .semibold, design: .serif))
                         .foregroundStyle(.white)
 
-                    Text("\(store.likedExperienceIDs.count) liked · \(store.dislikedExperienceIDs.count) skipped")
+                    Text("\(store.totalSwipeCount) swiped · \(store.likedExperienceIDs.count) liked · \(store.dislikedExperienceIDs.count) skipped")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(QTheme.muted)
                 }
@@ -2821,7 +2845,7 @@ struct ExperienceDetailSheet: View {
                         }
 
                     VStack(alignment: .leading, spacing: 14) {
-                        Label(experience.category, systemImage: "sparkle")
+                        Label(experience.activity, systemImage: "sparkle")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(.white.opacity(0.85))
 
