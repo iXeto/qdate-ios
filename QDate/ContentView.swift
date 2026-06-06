@@ -1298,6 +1298,26 @@ struct ButtonSwipeRequest: Equatable {
     let token = UUID()
 }
 
+/// Hit-test shape for the swipe gesture. Insets the active region so the
+/// edges/corners of the card fall through to the background scroll view
+/// instead of being captured as a swipe.
+struct SwipeHitShape: Shape {
+    var horizontalInset: CGFloat
+    var topInset: CGFloat
+    var bottomInset: CGFloat
+    var cornerRadius: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let inset = CGRect(
+            x: rect.minX + horizontalInset,
+            y: rect.minY + topInset,
+            width: max(0, rect.width - horizontalInset * 2),
+            height: max(0, rect.height - topInset - bottomInset)
+        )
+        return RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).path(in: inset)
+    }
+}
+
 struct ExperienceCard: View {
     @EnvironmentObject private var store: DemoStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -1376,7 +1396,7 @@ struct ExperienceCard: View {
         .shadow(color: QTheme.violet.opacity(0.28), radius: 26, y: 18)
         .offset(dragOffset)
         .rotationEffect(.degrees(reduceMotion ? 0 : Double(dragOffset.width / 22)))
-        .contentShape(RoundedRectangle(cornerRadius: 34, style: .continuous))
+        .contentShape(SwipeHitShape(horizontalInset: 26, topInset: 10, bottomInset: 22, cornerRadius: 28))
         .gesture(
             DragGesture(minimumDistance: 12)
                 .onChanged { value in
