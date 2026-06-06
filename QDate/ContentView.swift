@@ -1729,7 +1729,7 @@ struct MatchCockpit: View {
             GlassCard(cornerRadius: 30, glow: true) {
                 VStack(spacing: 18) {
                     HStack(spacing: 16) {
-                        AvatarOrb(name: store.user.name, symbol: "person.fill", color: QTheme.violet)
+                        AvatarOrb(name: store.user.name, imageName: "ProfilePhoto", symbol: "person.fill", color: QTheme.violet)
                         Image(systemName: "heart.fill")
                             .font(.system(size: 30, weight: .bold))
                             .foregroundStyle(QTheme.rose)
@@ -1767,25 +1767,56 @@ struct MatchCockpit: View {
     }
 }
 
+struct AccountProfilePhoto: View {
+    var size: CGFloat = 118
+
+    var body: some View {
+        Image("ProfilePhoto")
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .frame(width: size, height: size)
+            .clipShape(Circle())
+            .overlay {
+                Circle()
+                    .strokeBorder(Color.white.opacity(0.22), lineWidth: 1)
+            }
+            .shadow(color: QTheme.violet.opacity(0.35), radius: size * 0.22, y: size * 0.10)
+    }
+}
+
 struct AvatarOrb: View {
     let name: String
+    var imageName: String? = nil
     let symbol: String
     let color: Color
 
     var body: some View {
         VStack(spacing: 8) {
             ZStack {
-                Image(systemName: symbol)
-                    .font(.system(size: 28, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 86, height: 86)
-                    .glassEffect(.regular.tint(color.opacity(0.45)), in: .circle)
-                    .overlay {
-                        Circle()
-                            .strokeBorder(Color.white.opacity(0.28), lineWidth: 0.8)
-                            .allowsHitTesting(false)
-                    }
-                    .shadow(color: color.opacity(0.40), radius: 20, y: 8)
+                if let imageName {
+                    Image(imageName)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 86, height: 86)
+                        .clipShape(Circle())
+                        .overlay {
+                            Circle()
+                                .strokeBorder(Color.white.opacity(0.28), lineWidth: 0.8)
+                        }
+                        .shadow(color: color.opacity(0.40), radius: 20, y: 8)
+                } else {
+                    Image(systemName: symbol)
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 86, height: 86)
+                        .glassEffect(.regular.tint(color.opacity(0.45)), in: .circle)
+                        .overlay {
+                            Circle()
+                                .strokeBorder(Color.white.opacity(0.28), lineWidth: 0.8)
+                                .allowsHitTesting(false)
+                        }
+                        .shadow(color: color.opacity(0.40), radius: 20, y: 8)
+                }
             }
             .frame(width: 86, height: 86)
             Text(name)
@@ -2514,15 +2545,7 @@ struct ProfileHeader: View {
                 Button {
                     store.showPhotoEditor = true
                 } label: {
-                    ZStack {
-                        Circle()
-                            .fill(QTheme.violet)
-                            .frame(width: 118, height: 118)
-                            .shadow(color: QTheme.violet.opacity(0.35), radius: 26, y: 12)
-                        Image(systemName: "person.fill")
-                            .font(.system(size: 46, weight: .semibold))
-                            .foregroundStyle(.white)
-                    }
+                    AccountProfilePhoto()
                 }
                 .buttonStyle(.plain)
 
