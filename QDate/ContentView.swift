@@ -1703,8 +1703,7 @@ struct GuidanceTipCard: View {
                     Text(tip.actionTitle)
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
+                        .frame(width: 72, height: 32)
                         .contentShape(Capsule(style: .continuous))
                 }
                 .buttonStyle(.plain)
