@@ -88,6 +88,27 @@ struct TimeSlot: Identifiable {
     var partnerStatus: PartnerSlotStatus
 }
 
+struct ProfilePromptDefinition: Identifiable, Hashable {
+    let id: String
+    let question: String
+    let answers: [String]
+}
+
+struct ProfileQuestionSlot: Identifiable {
+    let id = UUID()
+    var questionID: String?
+    var selectedAnswers: Set<String> = []
+}
+
+struct ProfileEditContext: Identifiable {
+    let id: String
+    let title: String
+}
+
+struct QuestionEditContext: Identifiable {
+    let id: UUID
+}
+
 enum PartnerSlotStatus: String {
     case pending = "Pending"
     case accepted = "Accepted"
@@ -121,8 +142,22 @@ final class DemoStore: ObservableObject {
     @Published var showFilters = false
     @Published var showExperienceDetails: DateExperience?
     @Published var showTimeCoordination = false
-    @Published var showProfileEditor = false
     @Published var showPhotoEditor = false
+    @Published var editingProfileSection: ProfileEditContext?
+    @Published var editingQuestionSlot: QuestionEditContext?
+    @Published var vibeText = "Curious, warm, decisive"
+    @Published var aboutText = "Looking for intentional dates that feel easy, thoughtful, and a little cinematic."
+    @Published var favorites = ["natural wine", "quiet bars", "city lights"]
+    @Published var interests = ["🎨 Art galleries", "🗣️ Deep talks", "🚶 Long walks", "🎶 Concerts", "🧠 Personal growth"]
+    @Published var biggestWish = "Build a life that feels spacious, brave, and shared with the right person."
+    @Published var bucketExperiences = [
+        "Take a spontaneous train trip with no fixed plan",
+        "Watch sunrise after a great night out",
+        "Host a long dinner for friends and future friends"
+    ]
+    @Published var childhoodDream = "Architect"
+    @Published var currentPath = "Founder building relationship technology"
+    @Published var profileQuestionSlots = Array(repeating: ProfileQuestionSlot(), count: 5)
 
     let user = DemoUser(
         name: "Chris",
@@ -130,15 +165,73 @@ final class DemoStore: ObservableObject {
         city: "Hamburg",
         vibe: "Curious, warm, decisive",
         bio: "Looking for intentional dates that feel easy, thoughtful, and a little cinematic.",
-        interests: ["design", "deep talks", "coffee walks", "live music", "founder energy"],
-        favorites: ["natural wine", "quiet bars", "city lights"],
-        bucketList: ["midnight harbor walk", "learn salsa", "weekend in Lisbon"],
-        prompts: [
-            "Perfect first date: something planned well enough that we can be spontaneous.",
-            "Green flag: someone who follows through.",
-            "I am happiest when a conversation gets real without becoming heavy."
-        ]
+        interests: [],
+        favorites: [],
+        bucketList: [],
+        prompts: []
     )
+
+    let profilePromptDefinitions: [ProfilePromptDefinition] = [
+        ProfilePromptDefinition(
+            id: "communication",
+            question: "How would you describe your communication style?",
+            answers: ["Direct and honest", "Calm and thoughtful", "Casual and humorous", "Deep and reflective", "Curious and questioning", "Depends on the situation"]
+        ),
+        ProfilePromptDefinition(
+            id: "opinions",
+            question: "How do you deal with differing opinions?",
+            answers: ["I enjoy discussing things", "I listen first", "I try to find common ground", "I tend to avoid conflict", "It depends on the topic"]
+        ),
+        ProfilePromptDefinition(
+            id: "newpeople",
+            question: "When you meet new people, are you more likely to be...?",
+            answers: ["Immediately open", "Reserved at first", "Quiet, but interested", "Quickly talkative when the vibe is right", "Very situation-dependent"]
+        ),
+        ProfilePromptDefinition(
+            id: "important",
+            question: "What is most important to you in other people?",
+            answers: ["Honesty", "Empathy", "Humor", "Reliability", "Openness", "Self-reflection", "Calmness", "Loyalty"]
+        ),
+        ProfilePromptDefinition(
+            id: "openup",
+            question: "How easy is it for you to open up to new people?",
+            answers: ["Very easy", "Quickly, if the vibe is right", "Rather slowly", "I need several meetings", "It depends on the person"]
+        ),
+        ProfilePromptDefinition(
+            id: "difficult",
+            question: "What do you sometimes find difficult with new connections?",
+            answers: ["Making the first move", "Small talk", "Opening up right away", "Honestly saying what I think", "Keeping in touch", "None of these, actually"]
+        ),
+        ProfilePromptDefinition(
+            id: "changed",
+            question: "How much have you changed in recent years?",
+            answers: ["Hardly at all", "A little", "Quite a lot", "A lot", "I am currently in the middle of changing"]
+        ),
+        ProfilePromptDefinition(
+            id: "groups",
+            question: "What role do you usually take on in groups?",
+            answers: ["I start conversations", "I listen a lot", "I bring in humor", "I keep the group together", "I observe at first", "I adapt flexibly"]
+        ),
+        ProfilePromptDefinition(
+            id: "connection",
+            question: "What makes a good connection for you?",
+            answers: ["Honest communication", "Mutual trust", "Shared humor", "Similar values", "Deep conversations", "Ease / lightness", "Reliability"]
+        ),
+        ProfilePromptDefinition(
+            id: "selfimage",
+            question: "How would you describe your self-image?",
+            answers: ["I am rather self-confident", "I am rather self-critical", "I am a mix of both", "It strongly depends on the situation"]
+        ),
+        ProfilePromptDefinition(
+            id: "people",
+            question: "I get along well with people who...",
+            answers: ["communicate honestly", "have a lot of humor", "are calm and relaxed", "think deeply", "are open and curious", "don't take themselves too seriously"]
+        )
+    ]
+
+    init() {
+        profileQuestionSlots = (0..<5).map { _ in ProfileQuestionSlot() }
+    }
 
     let match = ActiveMatch(
         name: "Ava",
@@ -326,8 +419,6 @@ struct MainShell: View {
 
             VStack(spacing: 0) {
                 GlassHeader()
-                    .padding(.horizontal, 18)
-                    .padding(.top, 12)
 
                 Group {
                     switch store.selectedTab {
@@ -362,9 +453,14 @@ struct MainShell: View {
         .fullScreenCover(isPresented: $store.showTimeCoordination) {
             TimeCoordinationSheet()
         }
-        .sheet(isPresented: $store.showProfileEditor) {
-            ProfileEditSheet()
+        .sheet(item: $store.editingProfileSection) { context in
+            ProfileEditSheet(context: context)
                 .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $store.editingQuestionSlot) { context in
+            QuestionSlotEditSheet(slotID: context.id)
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $store.showPhotoEditor) {
@@ -490,45 +586,119 @@ struct GlassIconButton: View {
 }
 
 struct GlassHeader: View {
-    @EnvironmentObject private var store: DemoStore
+    @State private var showHelp = false
 
     var body: some View {
-        GlassCard(cornerRadius: 24) {
+        VStack(spacing: 0) {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("QDate")
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .font(.system(size: 28, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
-                    Text(store.stage.title)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(QTheme.muted)
+
+                    HStack(spacing: 6) {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(QTheme.electric)
+                        Text("Hamburg")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(QTheme.muted)
+                    }
                 }
 
                 Spacer()
 
-                StagePill(stage: store.stage)
+                Button {
+                    showHelp = true
+                    Haptics.light()
+                } label: {
+                    Image(systemName: "questionmark")
+                        .font(.system(size: 17, weight: .black))
+                        .foregroundStyle(.white)
+                        .frame(width: 42, height: 42)
+                        .background {
+                            Circle()
+                                .fill(Color.white.opacity(0.10))
+                                .background(.ultraThinMaterial, in: Circle())
+                                .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1))
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("QDate help")
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 14)
+            .padding(.horizontal, 22)
+            .padding(.top, 8)
+            .padding(.bottom, 13)
+        }
+        .frame(maxWidth: .infinity)
+        .background {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.08), Color.white.opacity(0.02)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .ignoresSafeArea(edges: .top)
+        }
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Color.white.opacity(0.10))
+                .frame(height: 1)
+        }
+        .sheet(isPresented: $showHelp) {
+            QDateHelpSheet()
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
         }
     }
 }
 
-struct StagePill: View {
-    let stage: SearchStage
+struct QDateHelpSheet: View {
+    var body: some View {
+        ZStack {
+            AppBackground()
+            VStack(alignment: .leading, spacing: 18) {
+                Text("How QDate works")
+                    .font(.system(size: 30, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+
+                HelpRow(symbol: "sparkles", title: "Search stays active", detail: "QDate learns from date ideas and readiness signals.")
+                HelpRow(symbol: "heart.circle", title: "No endless chat", detail: "The concierge moves promising matches toward a real plan.")
+                HelpRow(symbol: "calendar.badge.clock", title: "Hamburg demo", detail: "This prototype is seeded around local date planning.")
+
+                Spacer()
+            }
+            .padding(22)
+        }
+    }
+}
+
+struct HelpRow: View {
+    let symbol: String
+    let title: String
+    let detail: String
 
     var body: some View {
-        HStack(spacing: 7) {
-            Circle()
-                .fill(stage == .datePlanReady ? QTheme.success : QTheme.electric)
-                .frame(width: 8, height: 8)
-            Text(stage == .activeSearch ? "LIVE" : "DEMO")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(.white)
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: symbol)
+                .font(.system(size: 19, weight: .bold))
+                .foregroundStyle(QTheme.electric)
+                .frame(width: 30)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.white)
+                Text(detail)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(QTheme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(QTheme.violet.opacity(0.28), in: Capsule())
+        .padding(14)
+        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }
 
@@ -1487,33 +1657,27 @@ struct ProfileScreen: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 18) {
                     ProfileHeader()
-                    ProfileSection(title: "Vibe") {
-                        Text(store.user.vibe)
+                    EditableProfileSection(title: "Vibe", editID: "vibe") {
+                        Text(store.vibeText)
                             .profileText()
                     }
-                    ProfileSection(title: "Favorites") {
-                        TagWrap(tags: store.user.favorites)
+                    EditableProfileSection(title: "Favorites", editID: "favorites") {
+                        TagWrap(tags: store.favorites)
                     }
-                    ProfileSection(title: "Interests") {
-                        TagWrap(tags: store.user.interests)
+                    EditableProfileSection(title: "Interests", editID: "interests") {
+                        TagWrap(tags: store.interests)
                     }
-                    ProfileSection(title: "Bucket list") {
-                        TagWrap(tags: store.user.bucketList)
+                    EditableProfileSection(title: "Bucket List", editID: "bucket") {
+                        BucketListCardContent()
                     }
-                    ProfileSection(title: "About") {
-                        Text(store.user.bio)
+                    EditableProfileSection(title: "Career / Life Path", editID: "career") {
+                        CareerLifePathContent()
+                    }
+                    EditableProfileSection(title: "About You", editID: "about") {
+                        Text(store.aboutText)
                             .profileText()
                     }
-                    ProfileSection(title: "Dating prompts") {
-                        VStack(spacing: 10) {
-                            ForEach(store.user.prompts, id: \.self) { prompt in
-                                Text(prompt)
-                                    .profileText()
-                                    .padding(12)
-                                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            }
-                        }
-                    }
+                    ProfileQuestionCards()
                     SettingsLinks()
                 }
                 .padding(.horizontal, 18)
@@ -1555,8 +1719,8 @@ struct ProfileHeader: View {
                         .foregroundStyle(QTheme.muted)
                 }
 
-                GlassButton(title: "Edit Profile", symbol: "pencil", prominent: true) {
-                    store.showProfileEditor = true
+                GlassButton(title: "Edit Photo", symbol: "camera.fill", prominent: true) {
+                    store.showPhotoEditor = true
                 }
             }
             .padding(22)
@@ -1564,21 +1728,170 @@ struct ProfileHeader: View {
     }
 }
 
-struct ProfileSection<Content: View>: View {
+struct EditableProfileSection<Content: View>: View {
+    @EnvironmentObject private var store: DemoStore
     let title: String
+    let editID: String
     @ViewBuilder var content: Content
 
     var body: some View {
         GlassCard(cornerRadius: 22) {
             VStack(alignment: .leading, spacing: 12) {
-                Text(title)
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.white)
+                HStack {
+                    Text(title)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.white)
+                    Spacer()
+                    Button {
+                        store.editingProfileSection = ProfileEditContext(id: editID, title: title)
+                    } label: {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 13, weight: .black))
+                            .foregroundStyle(.white)
+                            .frame(width: 34, height: 34)
+                            .background(Color.white.opacity(0.10), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Edit \(title)")
+                }
                 content
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(18)
         }
+    }
+}
+
+struct BucketListCardContent: View {
+    @EnvironmentObject private var store: DemoStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ProfileQuestionValue(question: "Biggest wish for the future", value: store.biggestWish)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Three things I would like to experience")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(QTheme.muted)
+
+                ForEach(Array(store.bucketExperiences.enumerated()), id: \.offset) { index, value in
+                    HStack(alignment: .top, spacing: 10) {
+                        Text("\(index + 1)")
+                            .font(.system(size: 13, weight: .black))
+                            .foregroundStyle(QTheme.electric)
+                            .frame(width: 18)
+                        Text(value)
+                            .profileText()
+                    }
+                    .padding(10)
+                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+            }
+        }
+    }
+}
+
+struct CareerLifePathContent: View {
+    @EnvironmentObject private var store: DemoStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ProfileQuestionValue(question: "As a child, I wanted to become", value: store.childhoodDream)
+            ProfileQuestionValue(question: "What I do today", value: store.currentPath)
+        }
+    }
+}
+
+struct ProfileQuestionValue: View {
+    let question: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(question)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(QTheme.muted)
+            Text(value.isEmpty ? "Add an answer" : value)
+                .profileText()
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+struct ProfileQuestionCards: View {
+    @EnvironmentObject private var store: DemoStore
+
+    var body: some View {
+        GlassCard(cornerRadius: 22) {
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("QDate Questions")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.white)
+                    Text("Choose up to five personality cards. Each card can have multiple answers.")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(QTheme.muted)
+                }
+
+                VStack(spacing: 10) {
+                    ForEach(store.profileQuestionSlots.indices, id: \.self) { index in
+                        QuestionSlotCard(slot: store.profileQuestionSlots[index], index: index)
+                    }
+                }
+            }
+            .padding(18)
+        }
+    }
+}
+
+struct QuestionSlotCard: View {
+    @EnvironmentObject private var store: DemoStore
+    let slot: ProfileQuestionSlot
+    let index: Int
+
+    var body: some View {
+        Button {
+            store.editingQuestionSlot = QuestionEditContext(id: slot.id)
+        } label: {
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(slot.questionID == nil ? Color.white.opacity(0.09) : QTheme.violet.opacity(0.32))
+                        .frame(width: 34, height: 34)
+                    Text("\(index + 1)")
+                        .font(.system(size: 13, weight: .black))
+                        .foregroundStyle(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(definition?.question ?? "Choose a question")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.leading)
+                    if slot.selectedAnswers.isEmpty {
+                        Text("Tap to select a prompt and answers")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(QTheme.muted)
+                    } else {
+                        TagWrap(tags: Array(slot.selectedAnswers).sorted())
+                    }
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(QTheme.muted)
+                    .padding(.top, 5)
+            }
+            .padding(14)
+            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var definition: ProfilePromptDefinition? {
+        store.profilePromptDefinitions.first { $0.id == slot.questionID }
     }
 }
 
@@ -1885,23 +2198,372 @@ struct TimeSlotRow: View {
 
 struct ProfileEditSheet: View {
     @EnvironmentObject private var store: DemoStore
+    @Environment(\.dismiss) private var dismiss
+    let context: ProfileEditContext
 
     var body: some View {
         ZStack {
             AppBackground()
-            VStack(alignment: .leading, spacing: 18) {
-                Text("Edit profile")
-                    .font(.system(size: 30, weight: .black, design: .rounded))
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack {
+                        Text("Edit \(context.title)")
+                            .font(.system(size: 30, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                        Spacer()
+                        GlassIconButton(symbol: "xmark") {
+                            store.editingProfileSection = nil
+                            dismiss()
+                        }
+                    }
+
+                    editorContent
+
+                    GlassButton(title: "Done", symbol: "checkmark", prominent: true) {
+                        store.editingProfileSection = nil
+                        dismiss()
+                    }
+                }
+                .padding(20)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var editorContent: some View {
+        switch context.id {
+        case "vibe":
+            GlassTextEditor(title: "Vibe", text: $store.vibeText, axis: .vertical)
+        case "about":
+            GlassTextEditor(title: "About You", text: $store.aboutText, axis: .vertical)
+        case "favorites":
+            EditableTagList(title: "Favorites", tags: $store.favorites, suggestions: ["natural wine", "quiet bars", "city lights", "jazz", "good coffee", "bookstores"])
+        case "interests":
+            CategorizedInterestPicker(selectedInterests: $store.interests)
+        case "bucket":
+            GlassTextEditor(title: "Biggest wish for the future", text: $store.biggestWish, axis: .vertical)
+            ForEach(0..<3, id: \.self) { index in
+                GlassTextEditor(title: "\(index + 1)", text: bindingForBucketExperience(index), axis: .vertical)
+            }
+        case "career":
+            GlassTextEditor(title: "As a child, I wanted to become", text: $store.childhoodDream, axis: .vertical)
+            GlassTextEditor(title: "What I do today", text: $store.currentPath, axis: .vertical)
+        default:
+            Text("Nothing to edit")
+                .profileText()
+        }
+    }
+
+    private func bindingForBucketExperience(_ index: Int) -> Binding<String> {
+        Binding(
+            get: {
+                guard store.bucketExperiences.indices.contains(index) else { return "" }
+                return store.bucketExperiences[index]
+            },
+            set: { newValue in
+                guard store.bucketExperiences.indices.contains(index) else { return }
+                store.bucketExperiences[index] = newValue
+            }
+        )
+    }
+}
+
+struct GlassTextEditor: View {
+    let title: String
+    @Binding var text: String
+    var axis: Axis = .vertical
+
+    var body: some View {
+        GlassCard(cornerRadius: 20) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(title)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(QTheme.muted)
+                TextField(title, text: $text, axis: axis)
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.white)
-                DetailLine(title: "Vibe", value: store.user.vibe)
-                DetailLine(title: "Bio", value: "Mock editable in demo")
-                Spacer()
-                GlassButton(title: "Save Mock Changes", symbol: "checkmark", prominent: true) {
-                    store.showProfileEditor = false
+                    .lineLimit(axis == .vertical ? 2...5 : 1...1)
+                    .padding(12)
+                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .padding(16)
+        }
+    }
+}
+
+struct EditableTagList: View {
+    let title: String
+    @Binding var tags: [String]
+    let suggestions: [String]
+
+    var body: some View {
+        GlassCard(cornerRadius: 20) {
+            VStack(alignment: .leading, spacing: 14) {
+                Text(title)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(QTheme.muted)
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 116), spacing: 8)], spacing: 8) {
+                    ForEach(suggestions, id: \.self) { suggestion in
+                        Button {
+                            if tags.contains(suggestion) {
+                                tags.removeAll { $0 == suggestion }
+                            } else {
+                                tags.append(suggestion)
+                            }
+                        } label: {
+                            Text(suggestion)
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(tags.contains(suggestion) ? QTheme.violet.opacity(0.48) : Color.white.opacity(0.08), in: Capsule())
+                                .overlay(Capsule().stroke(Color.white.opacity(tags.contains(suggestion) ? 0.34 : 0.10), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
-            .padding(20)
+            .padding(16)
         }
+    }
+}
+
+struct InterestCategory: Identifiable {
+    let id = UUID()
+    let title: String
+    let interests: [String]
+}
+
+struct CategorizedInterestPicker: View {
+    @Binding var selectedInterests: [String]
+    private let maxSelection = 20
+    private let categories: [InterestCategory] = [
+        InterestCategory(title: "Sports & Movement", interests: ["🏃 Running", "🏋️ Gym", "🧘 Yoga", "🚴 Cycling", "🥾 Hiking", "🧗 Climbing", "🏊 Swimming", "⚽ Football", "🎾 Tennis", "🏀 Basketball", "🏐 Volleyball", "🛹 Skateboarding", "🥊 Boxing", "💃 Dancing", "🚶 Long walks"]),
+        InterestCategory(title: "Outdoors & Nature", interests: ["🌲 Nature walks", "🏕️ Camping", "🌊 Beach days", "🌅 Sunsets", "🪴 Houseplants", "🐶 Dogs", "🐱 Cats", "🐾 Animal lover", "🌿 Gardening", "🧺 Picnics", "🚣 Kayaking", "🏔️ Mountains"]),
+        InterestCategory(title: "Food & Drinks", interests: ["☕ Coffee", "🍵 Tea", "🍷 Wine tasting", "🍹 Cocktails", "🍸 Mocktails", "🍕 Pizza", "🍣 Sushi", "🍝 Italian food", "🌮 Street food", "🧁 Baking", "👨‍🍳 Cooking", "🥐 Brunch", "🌱 Vegetarian food", "🌶️ Spicy food"]),
+        InterestCategory(title: "Culture & Going Out", interests: ["🎬 Movies", "📺 Series", "🎭 Theatre", "🎤 Stand up comedy", "🎶 Concerts", "🎧 Festivals", "🖼️ Museums", "📚 Bookstores", "🎨 Art galleries", "🕺 Nightlife", "🎲 Board games", "🧩 Quiz nights", "🎳 Bowling"]),
+        InterestCategory(title: "Music", interests: ["🎧 Playlists", "🎸 Indie music", "🎤 Pop music", "🎹 Jazz", "🎧 Electronic music", "🎸 Rock", "🤘 Metal", "🎼 Classical music", "🎵 New music", "🎙️ Podcasts"]),
+        InterestCategory(title: "Creative & Personal", interests: ["📸 Photography", "🎨 Painting", "✍️ Writing", "🧶 DIY projects", "🪡 Fashion", "🧵 Thrifting", "🎥 Filmmaking", "🎮 Gaming", "🧠 Learning new things", "🗣️ Deep talks", "😂 Memes"]),
+        InterestCategory(title: "Travel & Adventure", interests: ["✈️ Travel", "🧳 City trips", "🏝️ Weekend getaways", "🚗 Road trips", "🗺️ Hidden gems", "🏛️ Historic places", "🌍 Different cultures", "🏨 Boutique hotels", "🚆 Train trips", "🧭 Spontaneous plans"]),
+        InterestCategory(title: "Lifestyle & Values", interests: ["🧘 Self care", "🛁 Spa days", "🕯️ Slow mornings", "🧼 Clean living", "🌱 Sustainability", "🤝 Volunteering", "🧑‍🤝‍🧑 Community events", "🧘 Meditation", "🧠 Personal growth", "🏡 Cozy nights in"])
+    ]
+
+    var body: some View {
+        GlassCard(cornerRadius: 20) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Interests")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(.white)
+                        Text("Select up to \(maxSelection). Categories are only here to make scanning faster.")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(QTheme.muted)
+                    }
+                    Spacer()
+                    Text("\(selectedInterests.count)/\(maxSelection)")
+                        .font(.system(size: 13, weight: .black))
+                        .foregroundStyle(selectedInterests.count >= maxSelection ? QTheme.warning : QTheme.electric)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(Color.white.opacity(0.09), in: Capsule())
+                }
+
+                VStack(alignment: .leading, spacing: 18) {
+                    ForEach(categories) { category in
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(category.title)
+                                .font(.system(size: 15, weight: .black, design: .rounded))
+                                .foregroundStyle(.white)
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 136), spacing: 8)], spacing: 8) {
+                                ForEach(category.interests, id: \.self) { interest in
+                                    InterestChip(
+                                        title: interest,
+                                        selected: selectedInterests.contains(interest),
+                                        disabled: selectedInterests.count >= maxSelection && !selectedInterests.contains(interest)
+                                    ) {
+                                        toggle(interest)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(16)
+        }
+    }
+
+    private func toggle(_ interest: String) {
+        if selectedInterests.contains(interest) {
+            selectedInterests.removeAll { $0 == interest }
+        } else if selectedInterests.count < maxSelection {
+            selectedInterests.append(interest)
+        } else {
+            Haptics.light()
+        }
+    }
+}
+
+struct InterestChip: View {
+    let title: String
+    let selected: Bool
+    let disabled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(disabled ? Color.white.opacity(0.38) : .white)
+                .lineLimit(2)
+                .minimumScaleFactor(0.82)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .padding(.horizontal, 10)
+                .background(selected ? QTheme.violet.opacity(0.50) : Color.white.opacity(disabled ? 0.04 : 0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(selected ? QTheme.electric.opacity(0.60) : Color.white.opacity(0.10), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+    }
+}
+
+struct QuestionSlotEditSheet: View {
+    @EnvironmentObject private var store: DemoStore
+    @Environment(\.dismiss) private var dismiss
+    let slotID: UUID
+
+    var body: some View {
+        ZStack {
+            AppBackground()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Edit question")
+                                .font(.system(size: 30, weight: .black, design: .rounded))
+                                .foregroundStyle(.white)
+                            Text("Pick one question, then select all answers that fit.")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(QTheme.muted)
+                        }
+                        Spacer()
+                        GlassIconButton(symbol: "xmark") {
+                            store.editingQuestionSlot = nil
+                            dismiss()
+                        }
+                    }
+
+                    GlassCard(cornerRadius: 22) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Question")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(.white)
+                            ForEach(store.profilePromptDefinitions) { definition in
+                                QuestionChoiceRow(definition: definition, selected: currentSlot?.questionID == definition.id) {
+                                    updateSlot { slot in
+                                        slot.questionID = definition.id
+                                        slot.selectedAnswers = []
+                                    }
+                                }
+                            }
+                        }
+                        .padding(16)
+                    }
+
+                    if let definition = selectedDefinition {
+                        GlassCard(cornerRadius: 22, glow: true) {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Answers")
+                                    .font(.system(size: 15, weight: .bold))
+                                    .foregroundStyle(.white)
+                                ForEach(definition.answers, id: \.self) { answer in
+                                    MultiSelectAnswerRow(answer: answer, selected: currentSlot?.selectedAnswers.contains(answer) ?? false) {
+                                        updateSlot { slot in
+                                            if slot.selectedAnswers.contains(answer) {
+                                                slot.selectedAnswers.remove(answer)
+                                            } else {
+                                                slot.selectedAnswers.insert(answer)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(16)
+                        }
+                    }
+
+                    GlassButton(title: "Done", symbol: "checkmark", prominent: true) {
+                        store.editingQuestionSlot = nil
+                        dismiss()
+                    }
+                }
+                .padding(20)
+            }
+        }
+    }
+
+    private var currentSlot: ProfileQuestionSlot? {
+        store.profileQuestionSlots.first { $0.id == slotID }
+    }
+
+    private var selectedDefinition: ProfilePromptDefinition? {
+        guard let questionID = currentSlot?.questionID else { return nil }
+        return store.profilePromptDefinitions.first { $0.id == questionID }
+    }
+
+    private func updateSlot(_ update: (inout ProfileQuestionSlot) -> Void) {
+        guard let index = store.profileQuestionSlots.firstIndex(where: { $0.id == slotID }) else { return }
+        update(&store.profileQuestionSlots[index])
+    }
+}
+
+struct QuestionChoiceRow: View {
+    let definition: ProfilePromptDefinition
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(selected ? QTheme.success : QTheme.muted)
+                Text(definition.question)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.leading)
+                Spacer()
+            }
+            .padding(12)
+            .background(selected ? QTheme.violet.opacity(0.22) : Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct MultiSelectAnswerRow: View {
+    let answer: String
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: selected ? "checkmark.square.fill" : "square")
+                    .foregroundStyle(selected ? QTheme.success : QTheme.muted)
+                Text(answer)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                Spacer()
+            }
+            .padding(12)
+            .background(selected ? QTheme.violet.opacity(0.25) : Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 }
 
