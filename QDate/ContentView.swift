@@ -3717,6 +3717,6 @@ struct PhotoEditSheet: View {
     }
 }
 
-#Preview {
+#Preview("QDate") {
     ContentView()
 }
