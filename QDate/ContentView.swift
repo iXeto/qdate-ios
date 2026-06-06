@@ -1375,7 +1375,10 @@ struct ExperienceCard: View {
             DragGesture()
                 .onChanged { value in
                     guard isTop else { return }
-                    dragOffset = value.translation
+                    dragOffset = CGSize(
+                        width: value.translation.width,
+                        height: Self.dampenedVertical(value.translation.height)
+                    )
                 }
                 .onEnded { value in
                     guard isTop else { return }
@@ -1389,6 +1392,15 @@ struct ExperienceCard: View {
                     }
                 }
         )
+    }
+
+    private static let verticalLimit: CGFloat = 36
+
+    private static func dampenedVertical(_ raw: CGFloat) -> CGFloat {
+        let limit = verticalLimit
+        let magnitude = abs(raw)
+        let resisted = limit * (1 - exp(-magnitude / limit))
+        return raw < 0 ? -resisted : resisted
     }
 }
 
