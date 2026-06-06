@@ -203,6 +203,46 @@ enum PartnerSlotStatus: String {
     }
 }
 
+enum ReadinessImprovementTip: String, CaseIterable, Identifiable {
+    case swipeMore
+    case addAvailability
+    case answerProfileQuestions
+
+    var id: String { rawValue }
+
+    var symbol: String {
+        switch self {
+        case .swipeMore: "heart.text.square"
+        case .addAvailability: "calendar.badge.clock"
+        case .answerProfileQuestions: "text.bubble"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .swipeMore: "Swipe more date ideas"
+        case .addAvailability: "Add availability"
+        case .answerProfileQuestions: "Answer profile questions"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .swipeMore: "Helps QDate understand your ideal setting."
+        case .addAvailability: "Needed before a match can become a plan."
+        case .answerProfileQuestions: "Sharper answers lead to better matches."
+        }
+    }
+
+    var actionTitle: String {
+        switch self {
+        case .swipeMore: "Swipe"
+        case .addAvailability: "Add"
+        case .answerProfileQuestions: "Answer"
+        }
+    }
+}
+
 enum Weekday: String, CaseIterable, Identifiable {
     case monday
     case tuesday
@@ -531,6 +571,44 @@ final class DemoStore: ObservableObject {
 
     var hasNoMatchingExperiences: Bool {
         filteredExperiences.isEmpty
+    }
+
+    var filledProfileQuestionCount: Int {
+        profileQuestionSlots.filter { slot in
+            slot.questionID != nil && !slot.selectedAnswers.isEmpty
+        }.count
+    }
+
+    var readinessImprovementTips: [ReadinessImprovementTip] {
+        ReadinessImprovementTip.allCases.filter { tip in
+            switch tip {
+            case .swipeMore:
+                totalSwipeCount < 3 && currentExperience != nil
+            case .addAvailability:
+                weeklyAvailability.count < 4
+            case .answerProfileQuestions:
+                filledProfileQuestionCount < 3
+            }
+        }
+        .prefix(3)
+        .map { $0 }
+    }
+
+    func performReadinessAction(for tip: ReadinessImprovementTip, scrollToSwipeDeck: (() -> Void)? = nil) {
+        switch tip {
+        case .swipeMore:
+            scrollToSwipeDeck?()
+        case .addAvailability:
+            showAvailabilityEditor = true
+        case .answerProfileQuestions:
+            selectedTab = .profile
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+                guard let self else { return }
+                if let slot = profileQuestionSlots.first(where: { $0.questionID == nil || $0.selectedAnswers.isEmpty }) {
+                    editingQuestionSlot = QuestionEditContext(id: slot.id)
+                }
+            }
+        }
     }
 
     func applyFilters(budgetTiers: Set<String>, categories: Set<String>) {
@@ -1100,11 +1178,18 @@ struct HomeScreen: View {
                 VStack(spacing: 18) {
                     switch store.stage {
                     case .activeSearch:
-                        ActiveSearchView {
-                            withAnimation(.easeInOut(duration: 0.45)) {
-                                proxy.scrollTo("improveMatchReadiness", anchor: .top)
+                        ActiveSearchView(
+                            scrollToImproveReadiness: {
+                                withAnimation(.easeInOut(duration: 0.45)) {
+                                    proxy.scrollTo("improveMatchReadiness", anchor: .top)
+                                }
+                            },
+                            scrollToSwipeDeck: {
+                                withAnimation(.easeInOut(duration: 0.45)) {
+                                    proxy.scrollTo("experienceSwipeDeck", anchor: .center)
+                                }
                             }
-                        }
+                        )
                 case .matchFound, .timeCoordinationOpen:
                     MatchCockpit()
                 case .userVotedWaiting:
@@ -1134,6 +1219,7 @@ struct HomeScreen: View {
 struct ActiveSearchView: View {
     @EnvironmentObject private var store: DemoStore
     let scrollToImproveReadiness: () -> Void
+    let scrollToSwipeDeck: () -> Void
 
     var body: some View {
         VStack(spacing: 14) {
@@ -1141,8 +1227,9 @@ struct ActiveSearchView: View {
                 .padding(.bottom, 20)
 
             ExperienceSwipeDeck()
+                .id("experienceSwipeDeck")
 
-            GuidanceTasks()
+            GuidanceTasks(scrollToSwipeDeck: scrollToSwipeDeck)
                 .id("improveMatchReadiness")
         }
     }
@@ -1565,38 +1652,72 @@ struct PromptRow: View {
 }
 
 struct GuidanceTasks: View {
+    @EnvironmentObject private var store: DemoStore
+    let scrollToSwipeDeck: () -> Void
+
     var body: some View {
-        GlassCard(cornerRadius: 22) {
-            VStack(alignment: .leading, spacing: 12) {
+        let tips = store.readinessImprovementTips
+        if !tips.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
                 Text("Improve match readiness")
                     .font(.system(size: 17, weight: .bold))
                     .foregroundStyle(.white)
-                GuidanceRow(symbol: "heart.text.square", title: "Swipe 3 date ideas", detail: "Helps QDate understand your ideal setting.")
-                GuidanceRow(symbol: "calendar.badge.clock", title: "Confirm availability", detail: "Needed before a match can become a plan.")
+                    .padding(.leading, 2)
+
+                ForEach(tips) { tip in
+                    GuidanceTipCard(tip: tip, scrollToSwipeDeck: scrollToSwipeDeck)
+                }
             }
-            .padding(18)
         }
     }
 }
 
-struct GuidanceRow: View {
-    let symbol: String
-    let title: String
-    let detail: String
+struct GuidanceTipCard: View {
+    @EnvironmentObject private var store: DemoStore
+    let tip: ReadinessImprovementTip
+    let scrollToSwipeDeck: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: symbol)
-                .foregroundStyle(QTheme.electric)
-                .frame(width: 30)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.white)
-                Text(detail)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(QTheme.muted)
+        GlassCard(cornerRadius: 18) {
+            HStack(alignment: .center, spacing: 12) {
+                Image(systemName: tip.symbol)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(QTheme.electric)
+                    .frame(width: 28)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(tip.title)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white)
+                    Text(tip.detail)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(QTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 8)
+
+                Button {
+                    store.performReadinessAction(for: tip, scrollToSwipeDeck: scrollToSwipeDeck)
+                } label: {
+                    Text(tip.actionTitle)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .contentShape(Capsule(style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .glassEffect(.regular.tint(QTheme.violet.opacity(0.42)).interactive(), in: .capsule)
+                .overlay {
+                    Capsule(style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.8)
+                        .allowsHitTesting(false)
+                }
+                .accessibilityLabel("\(tip.actionTitle), \(tip.title)")
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
         }
     }
 }
