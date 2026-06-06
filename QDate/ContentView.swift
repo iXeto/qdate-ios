@@ -1804,18 +1804,11 @@ struct MatchHero: View {
                 .font(.system(size: 15, weight: .bold))
                 .foregroundStyle(.white)
             }
-
-            Text("QDate found a high-intent match in \(store.match.city).")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(QTheme.muted)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 8)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 6)
         .onAppear {
-            withAnimation(.easeInOut(duration: 0.85).repeatForever(autoreverses: true)) {
+            withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
                 heartBeat = true
             }
         }
@@ -1833,7 +1826,7 @@ struct MatchHero: View {
                 .font(.system(size: 21, weight: .bold))
                 .foregroundStyle(QTheme.rose)
         }
-        .scaleEffect(heartBeat ? 1.12 : 0.95)
+        .scaleEffect(heartBeat ? 1.05 : 0.98)
         .shadow(color: QTheme.rose.opacity(0.5), radius: 12)
     }
 }
