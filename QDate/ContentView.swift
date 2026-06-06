@@ -1805,7 +1805,7 @@ struct MatchHero: View {
                 .foregroundStyle(.white)
             }
 
-            Text("You and \(store.match.name), \(store.match.age) — a high-intent match in \(store.match.city).")
+            Text("QDate found a high-intent match in \(store.match.city).")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(QTheme.muted)
                 .multilineTextAlignment(.center)
@@ -1838,13 +1838,39 @@ struct MatchHero: View {
     }
 }
 
-/// Animated lines that "float" between the two profile photos.
+/// A travelling sine wave used to connect the two profile photos.
+struct WaveShape: Shape {
+    var phase: CGFloat
+    var amplitude: CGFloat
+    var wavelength: CGFloat
+
+    var animatableData: CGFloat {
+        get { phase }
+        set { phase = newValue }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let midY = rect.midY
+        path.move(to: CGPoint(x: 0, y: midY))
+        var x: CGFloat = 0
+        while x <= rect.width {
+            let relative = x / wavelength
+            let y = midY + sin(relative * 2 * .pi + phase) * amplitude
+            path.addLine(to: CGPoint(x: x, y: y))
+            x += 1
+        }
+        return path
+    }
+}
+
+/// Animated wavy "waveform" lines that connect the two profile photos.
 struct FloatingConnector: View {
     let width: CGFloat
-    @State private var animate = false
+    @State private var phase: CGFloat = 0
 
     private let lineGradient = LinearGradient(
-        colors: [QTheme.violet.opacity(0), QTheme.electric.opacity(0.8), QTheme.rose.opacity(0)],
+        colors: [QTheme.violet.opacity(0), QTheme.electric.opacity(0.9), QTheme.rose.opacity(0)],
         startPoint: .leading,
         endPoint: .trailing
     )
@@ -1852,36 +1878,21 @@ struct FloatingConnector: View {
     var body: some View {
         ZStack {
             ForEach(0..<3, id: \.self) { i in
-                Capsule()
-                    .fill(lineGradient)
-                    .frame(width: width, height: 1.5)
-                    .offset(y: CGFloat(i - 1) * 11)
-                    .opacity(animate ? 0.85 : 0.25)
-                    .animation(
-                        .easeInOut(duration: 1.6)
-                            .repeatForever(autoreverses: true)
-                            .delay(Double(i) * 0.28),
-                        value: animate
-                    )
-            }
-
-            ForEach(0..<3, id: \.self) { i in
-                Circle()
-                    .fill(Color.white)
-                    .frame(width: 4, height: 4)
-                    .shadow(color: QTheme.electric, radius: 4)
-                    .offset(x: animate ? width / 2 - 6 : -width / 2 + 6, y: CGFloat(i - 1) * 11)
-                    .opacity(0.85)
-                    .animation(
-                        .easeInOut(duration: 2.0)
-                            .repeatForever(autoreverses: true)
-                            .delay(Double(i) * 0.45),
-                        value: animate
-                    )
+                WaveShape(
+                    phase: phase + CGFloat(i) * (.pi / 2.5),
+                    amplitude: 6 - CGFloat(i) * 1.5,
+                    wavelength: 24
+                )
+                .stroke(lineGradient, style: StrokeStyle(lineWidth: 2 - CGFloat(i) * 0.4, lineCap: .round))
+                .opacity(0.85 - Double(i) * 0.22)
             }
         }
-        .frame(width: width, height: 30)
-        .onAppear { animate = true }
+        .frame(width: width, height: 34)
+        .onAppear {
+            withAnimation(.linear(duration: 2.4).repeatForever(autoreverses: false)) {
+                phase = .pi * 2
+            }
+        }
     }
 }
 
