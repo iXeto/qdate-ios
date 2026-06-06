@@ -1754,8 +1754,6 @@ struct MatchCockpit: View {
                 .padding(20)
             }
 
-            TimelineCard()
-
             GlassButton(
                 title: store.stage == .timeCoordinationOpen ? "Edit Time Choices" : "Coordinate Availability",
                 symbol: "calendar.badge.clock",
@@ -1763,6 +1761,8 @@ struct MatchCockpit: View {
             ) {
                 store.openTimeCoordination()
             }
+
+            TimelineCard()
         }
     }
 }
@@ -1862,10 +1862,10 @@ struct TimelineCard: View {
                 Text("Date journey")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(.white)
-                TimelineRow(done: true, title: "Preferences learned", detail: "Date ideas and readiness signal collected.")
-                TimelineRow(done: true, title: "Match confirmed", detail: "\(store.match.name) fits your intent and vibe.")
-                TimelineRow(done: false, title: "Coordinate time", detail: "Choose shared availability.")
-                TimelineRow(done: false, title: "QDate plans", detail: "Venue, route, meeting point, and plan.")
+                TimelineRow(done: true, title: "Match found", detail: "We brought you together.")
+                TimelineRow(done: false, title: "Choose times", detail: "Coordination is open — select every time that works for you.")
+                TimelineRow(done: false, title: "Plan the meetup", detail: "Once a shared time is found, we'll prepare your plan.")
+                TimelineRow(done: false, title: "Get your date plan", detail: "Venue, route, meeting point — all final details right here in time.")
             }
             .padding(18)
         }
