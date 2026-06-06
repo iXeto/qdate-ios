@@ -24,29 +24,6 @@ enum SearchStage: String {
     case dateBeingPlanned
     case datePlanReady
 
-    var title: String {
-        switch self {
-        case .activeSearch: "Live search"
-        case .matchFound: "Match found"
-        case .timeCoordinationOpen: "Coordinate time"
-        case .userVotedWaiting: "Waiting for Ava"
-        case .sharedTimeFound: "Shared time found"
-        case .dateBeingPlanned: "Planning date"
-        case .datePlanReady: "Date plan ready"
-        }
-    }
-
-    var subtitle: String {
-        switch self {
-        case .activeSearch: "Swipe experiences to sharpen what QDate should plan."
-        case .matchFound: "Ava matches your date energy and availability."
-        case .timeCoordinationOpen: "Pick the times that feel right."
-        case .userVotedWaiting: "Your choices are saved. QDate is waiting for Ava."
-        case .sharedTimeFound: "You both aligned on Sunday evening."
-        case .dateBeingPlanned: "QDate is assembling the reservation, route, and plan."
-        case .datePlanReady: "Your real-world date is ready."
-        }
-    }
 }
 
 struct DemoUser {
@@ -768,8 +745,6 @@ struct HomeScreen: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 18) {
-                StageHero()
-
                 switch store.stage {
                 case .activeSearch:
                     ActiveSearchView()
@@ -788,62 +763,6 @@ struct HomeScreen: View {
             .padding(.horizontal, 18)
             .padding(.top, 18)
             .padding(.bottom, 112)
-        }
-    }
-}
-
-struct StageHero: View {
-    @EnvironmentObject private var store: DemoStore
-
-    var body: some View {
-        GlassCard(cornerRadius: 30, glow: store.stage == .datePlanReady) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(store.stage.title)
-                            .font(.system(size: 30, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
-                        Text(store.stage.subtitle)
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(QTheme.muted)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Spacer()
-                    Image(systemName: store.stage == .datePlanReady ? "checkmark.seal.fill" : "wand.and.stars")
-                        .font(.system(size: 30, weight: .semibold))
-                        .foregroundStyle(QTheme.electric)
-                }
-
-                JourneyTimeline()
-            }
-            .padding(20)
-        }
-    }
-}
-
-struct JourneyTimeline: View {
-    @EnvironmentObject private var store: DemoStore
-    private let stages: [SearchStage] = [.activeSearch, .matchFound, .timeCoordinationOpen, .userVotedWaiting, .dateBeingPlanned, .datePlanReady]
-
-    var body: some View {
-        HStack(spacing: 6) {
-            ForEach(stages.indices, id: \.self) { index in
-                Capsule()
-                    .fill(index <= currentIndex ? QTheme.electric : Color.white.opacity(0.14))
-                    .frame(height: 5)
-            }
-        }
-        .accessibilityLabel("Date journey progress")
-    }
-
-    private var currentIndex: Int {
-        switch store.stage {
-        case .activeSearch: 0
-        case .matchFound: 1
-        case .timeCoordinationOpen: 2
-        case .userVotedWaiting, .sharedTimeFound: 3
-        case .dateBeingPlanned: 4
-        case .datePlanReady: 5
         }
     }
 }
