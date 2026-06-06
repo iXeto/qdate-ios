@@ -56,7 +56,12 @@ struct DemoUser {
     var vibe: String
     var bio: String
     var interests: [String]
-    var favorites: [String]
+    var favoriteArtist: String
+    var favoriteSong: String
+    var favoriteMovie: String
+    var favoriteFood: String
+    var favoriteDestination: String
+    var favoriteBook: String
     var bucketList: [String]
     var prompts: [String]
 }
@@ -147,7 +152,12 @@ final class DemoStore: ObservableObject {
     @Published var editingQuestionSlot: QuestionEditContext?
     @Published var vibeText = "Curious, warm, decisive"
     @Published var aboutText = "Looking for intentional dates that feel easy, thoughtful, and a little cinematic."
-    @Published var favorites = ["natural wine", "quiet bars", "city lights"]
+    @Published var favoriteArtist = "Daft Punk"
+    @Published var favoriteSong = "Get Lucky"
+    @Published var favoriteMovie = "Interstellar"
+    @Published var favoriteFood = "Sushi"
+    @Published var favoriteDestination = "Tokyo"
+    @Published var favoriteBook = "The Hobbit"
     @Published var interests = ["🎨 Art galleries", "🗣️ Deep talks", "🚶 Long walks", "🎶 Concerts", "🧠 Personal growth"]
     @Published var biggestWish = "Build a life that feels spacious, brave, and shared with the right person."
     @Published var bucketExperiences = [
@@ -166,7 +176,12 @@ final class DemoStore: ObservableObject {
         vibe: "Curious, warm, decisive",
         bio: "Looking for intentional dates that feel easy, thoughtful, and a little cinematic.",
         interests: [],
-        favorites: [],
+        favoriteArtist: "Daft Punk",
+        favoriteSong: "Get Lucky",
+        favoriteMovie: "Interstellar",
+        favoriteFood: "Sushi",
+        favoriteDestination: "Tokyo",
+        favoriteBook: "The Hobbit",
         bucketList: [],
         prompts: []
     )
@@ -455,7 +470,7 @@ struct MainShell: View {
         }
         .sheet(item: $store.editingProfileSection) { context in
             ProfileEditSheet(context: context)
-                .presentationDetents([.medium])
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(item: $store.editingQuestionSlot) { context in
@@ -1662,7 +1677,7 @@ struct ProfileScreen: View {
                             .profileText()
                     }
                     EditableProfileSection(title: "Favorites", editID: "favorites") {
-                        TagWrap(tags: store.favorites)
+                        FavoritesCardContent()
                     }
                     EditableProfileSection(title: "Interests", editID: "interests") {
                         TagWrap(tags: store.interests)
@@ -1759,6 +1774,41 @@ struct EditableProfileSection<Content: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(18)
         }
+    }
+}
+
+struct FavoritesCardContent: View {
+    @EnvironmentObject private var store: DemoStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            FavoriteRow(label: "Artist", value: store.favoriteArtist)
+            FavoriteRow(label: "Song", value: store.favoriteSong)
+            FavoriteRow(label: "Movie", value: store.favoriteMovie)
+            FavoriteRow(label: "Food", value: store.favoriteFood)
+            FavoriteRow(label: "Travel Destination", value: store.favoriteDestination)
+            FavoriteRow(label: "Book", value: store.favoriteBook)
+        }
+    }
+}
+
+struct FavoriteRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(QTheme.muted)
+            Spacer()
+            Text(value.isEmpty ? "Not specified" : value)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.white)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }
 
@@ -2237,7 +2287,14 @@ struct ProfileEditSheet: View {
         case "about":
             GlassTextEditor(title: "About You", text: $store.aboutText, axis: .vertical)
         case "favorites":
-            EditableTagList(title: "Favorites", tags: $store.favorites, suggestions: ["natural wine", "quiet bars", "city lights", "jazz", "good coffee", "bookstores"])
+            FavoritesEditor(
+                artist: $store.favoriteArtist,
+                song: $store.favoriteSong,
+                movie: $store.favoriteMovie,
+                food: $store.favoriteFood,
+                destination: $store.favoriteDestination,
+                book: $store.favoriteBook
+            )
         case "interests":
             CategorizedInterestPicker(selectedInterests: $store.interests)
         case "bucket":
@@ -2287,6 +2344,49 @@ struct GlassTextEditor: View {
                     .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
             .padding(16)
+        }
+    }
+}
+
+struct FavoritesEditor: View {
+    @Binding var artist: String
+    @Binding var song: String
+    @Binding var movie: String
+    @Binding var food: String
+    @Binding var destination: String
+    @Binding var book: String
+
+    var body: some View {
+        GlassCard(cornerRadius: 20) {
+            VStack(spacing: 14) {
+                FavoriteEditField(title: "Artist", text: $artist)
+                FavoriteEditField(title: "Song", text: $song)
+                FavoriteEditField(title: "Movie", text: $movie)
+                FavoriteEditField(title: "Food", text: $food)
+                FavoriteEditField(title: "Travel Destination", text: $destination)
+                FavoriteEditField(title: "Book", text: $book)
+            }
+            .padding(16)
+        }
+    }
+}
+
+struct FavoriteEditField: View {
+    let title: String
+    @Binding var text: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(QTheme.muted)
+            TextField("Enter favorite \(title.lowercased())", text: $text)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .padding(.vertical, 10)
+                .padding(.horizontal, 12)
+                .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .textFieldStyle(.plain)
         }
     }
 }
