@@ -1880,43 +1880,209 @@ struct CompatibilityReason: View {
     }
 }
 
+enum TimelineStepState {
+    case completed
+    case current
+    case upcoming
+}
+
+struct DateJourneyStep: Identifiable {
+    let id: Int
+    let title: String
+    let detail: String
+}
+
 struct TimelineCard: View {
     @EnvironmentObject private var store: DemoStore
 
+    private let steps: [DateJourneyStep] = [
+        DateJourneyStep(id: 0, title: "Match found", detail: "We brought you together."),
+        DateJourneyStep(id: 1, title: "Choose times", detail: "Coordination is open — select every time that works for you."),
+        DateJourneyStep(id: 2, title: "Plan the meetup", detail: "Once a shared time is found, we'll prepare your plan."),
+        DateJourneyStep(id: 3, title: "Get your date plan", detail: "Venue, route, meeting point — all final details right here in time.")
+    ]
+
+    private var currentStepIndex: Int {
+        switch store.stage {
+        case .matchFound:
+            return 0
+        case .timeCoordinationOpen:
+            return 1
+        case .userVotedWaiting:
+            return 2
+        case .sharedTimeFound, .dateBeingPlanned:
+            return 2
+        case .datePlanReady:
+            return 3
+        default:
+            return 0
+        }
+    }
+
+    private func state(for index: Int) -> TimelineStepState {
+        if index < currentStepIndex { return .completed }
+        if index == currentStepIndex { return .current }
+        return .upcoming
+    }
+
     var body: some View {
         GlassCard(cornerRadius: 22) {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("Date journey")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.white)
-                TimelineRow(done: true, title: "Match found", detail: "We brought you together.")
-                TimelineRow(done: false, title: "Choose times", detail: "Coordination is open — select every time that works for you.")
-                TimelineRow(done: false, title: "Plan the meetup", detail: "Once a shared time is found, we'll prepare your plan.")
-                TimelineRow(done: false, title: "Get your date plan", detail: "Venue, route, meeting point — all final details right here in time.")
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .center) {
+                    Text("Date journey")
+                        .font(.system(size: 21, weight: .bold))
+                        .foregroundStyle(.white)
+                    Spacer()
+                    JourneyStepPill(current: currentStepIndex + 1, total: steps.count)
+                }
+                .padding(.bottom, 18)
+
+                ForEach(Array(steps.enumerated()), id: \.element.id) { index, step in
+                    TimelineRow(
+                        state: state(for: index),
+                        title: step.title,
+                        detail: step.detail,
+                        isFirst: index == 0,
+                        isLast: index == steps.count - 1,
+                        connectorBelowIsActive: index < currentStepIndex
+                    )
+                }
             }
             .padding(18)
         }
     }
 }
 
-struct TimelineRow: View {
-    let done: Bool
-    let title: String
-    let detail: String
+struct JourneyStepPill: View {
+    let current: Int
+    let total: Int
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: done ? "checkmark.circle.fill" : "circle")
-                .foregroundStyle(done ? QTheme.success : QTheme.muted)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.white)
-                Text(detail)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(QTheme.muted)
+        Text("Step \(current)/\(total)")
+            .font(.system(size: 12, weight: .bold))
+            .foregroundStyle(QTheme.electric)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(QTheme.electric.opacity(0.14), in: Capsule())
+            .overlay {
+                Capsule()
+                    .strokeBorder(QTheme.electric.opacity(0.38), lineWidth: 1)
             }
-            Spacer()
+    }
+}
+
+struct TimelineRow: View {
+    let state: TimelineStepState
+    let title: String
+    let detail: String
+    let isFirst: Bool
+    let isLast: Bool
+    let connectorBelowIsActive: Bool
+
+    private let trackWidth: CGFloat = 24
+    private let nodeSize: CGFloat = 14
+    private let currentNodeSize: CGFloat = 12
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 6) {
+            VStack(spacing: 0) {
+                if !isFirst {
+                    Rectangle()
+                        .fill(connectorAboveColor)
+                        .frame(width: 2, height: 10)
+                }
+
+                timelineNode
+                    .frame(width: trackWidth, height: state == .current ? 30 : 24)
+
+                if !isLast {
+                    connectorBelow
+                        .frame(width: 2)
+                        .frame(minHeight: state == .current ? 72 : 58)
+                }
+            }
+            .frame(width: trackWidth)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title)
+                    .font(.system(size: state == .current ? 19 : 17, weight: .bold))
+                    .foregroundStyle(state == .upcoming ? .white.opacity(0.72) : .white)
+                Text(detail)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(state == .current ? .white.opacity(0.82) : QTheme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, state == .current ? 14 : 8)
+            .padding(.horizontal, 14)
+            .background {
+                if state == .current {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(QTheme.violet.opacity(0.22))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .strokeBorder(QTheme.electric.opacity(0.45), lineWidth: 1)
+                        }
+                        .shadow(color: QTheme.violet.opacity(0.35), radius: 14, y: 4)
+                }
+            }
+            .padding(.bottom, isLast ? 0 : 4)
+        }
+    }
+
+    @ViewBuilder
+    private var timelineNode: some View {
+        switch state {
+        case .completed:
+            ZStack {
+                Circle()
+                    .fill(QTheme.success)
+                    .frame(width: nodeSize + 4, height: nodeSize + 4)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 8, weight: .black))
+                    .foregroundStyle(QTheme.midnight)
+            }
+        case .current:
+            ZStack {
+                Circle()
+                    .fill(QTheme.electric.opacity(0.22))
+                    .frame(width: 30, height: 30)
+                Circle()
+                    .strokeBorder(QTheme.electric, lineWidth: 2.5)
+                    .frame(width: 22, height: 22)
+                Circle()
+                    .fill(QTheme.electric)
+                    .frame(width: currentNodeSize, height: currentNodeSize)
+                    .shadow(color: QTheme.electric.opacity(0.65), radius: 8)
+            }
+        case .upcoming:
+            Circle()
+                .strokeBorder(Color.white.opacity(0.28), lineWidth: 2)
+                .frame(width: nodeSize, height: nodeSize)
+        }
+    }
+
+    private var connectorAboveColor: Color {
+        state == .upcoming ? Color.white.opacity(0.14) : QTheme.success.opacity(0.85)
+    }
+
+    @ViewBuilder
+    private var connectorBelow: some View {
+        if connectorBelowIsActive {
+            Rectangle()
+                .fill(QTheme.success.opacity(0.85))
+        } else if state == .current {
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: [QTheme.electric.opacity(0.75), Color.white.opacity(0.14)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+        } else {
+            Rectangle()
+                .fill(Color.white.opacity(0.14))
         }
     }
 }
