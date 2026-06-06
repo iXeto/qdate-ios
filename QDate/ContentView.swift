@@ -1149,42 +1149,59 @@ struct MetricPill: View {
 struct ExperienceSwipeDeck: View {
     @EnvironmentObject private var store: DemoStore
 
+    private let cardHeight: CGFloat = 520
+
     var body: some View {
-        ZStack {
-            ForEach(Array(store.filteredExperiences.enumerated().reversed()), id: \.element.id) { index, experience in
-                if index >= store.selectedExperienceIndex && index < store.selectedExperienceIndex + 3 {
-                    ExperienceCard(
-                        experience: experience,
-                        isTop: index == store.selectedExperienceIndex
-                    )
-                    .scaleEffect(index == store.selectedExperienceIndex ? 1 : 0.94 - CGFloat(index - store.selectedExperienceIndex) * 0.03)
-                    .offset(y: CGFloat(index - store.selectedExperienceIndex) * 14)
-                    .zIndex(Double(store.filteredExperiences.count - index))
+        VStack(spacing: 20) {
+            ZStack {
+                ForEach(Array(store.filteredExperiences.enumerated().reversed()), id: \.element.id) { index, experience in
+                    if index >= store.selectedExperienceIndex && index < store.selectedExperienceIndex + 3 {
+                        ExperienceCard(
+                            experience: experience,
+                            isTop: index == store.selectedExperienceIndex,
+                            cardHeight: cardHeight
+                        )
+                        .scaleEffect(index == store.selectedExperienceIndex ? 1 : 0.94 - CGFloat(index - store.selectedExperienceIndex) * 0.03)
+                        .offset(y: CGFloat(index - store.selectedExperienceIndex) * 14)
+                        .zIndex(Double(store.filteredExperiences.count - index))
+                    }
+                }
+
+                if store.currentExperience == nil {
+                    GlassCard(cornerRadius: 28) {
+                        VStack(spacing: 14) {
+                            Image(systemName: store.hasNoMatchingExperiences ? "line.3.horizontal.decrease.circle" : "sparkles.rectangle.stack")
+                                .font(.system(size: 42))
+                                .foregroundStyle(QTheme.electric)
+                            Text(store.hasNoMatchingExperiences ? "No matches for these filters" : "Enough signal collected")
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundStyle(.white)
+                            Text(store.hasNoMatchingExperiences
+                                 ? "Try another budget tier or category to see more date ideas."
+                                 : "QDate has what it needs to move from search into a curated match.")
+                                .font(.system(size: 14))
+                                .foregroundStyle(QTheme.muted)
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding(28)
+                        .frame(maxWidth: .infinity, minHeight: cardHeight)
+                    }
                 }
             }
+            .frame(height: cardHeight)
 
-            if store.currentExperience == nil {
-                GlassCard(cornerRadius: 28) {
-                    VStack(spacing: 14) {
-                        Image(systemName: store.hasNoMatchingExperiences ? "line.3.horizontal.decrease.circle" : "sparkles.rectangle.stack")
-                            .font(.system(size: 42))
-                            .foregroundStyle(QTheme.electric)
-                        Text(store.hasNoMatchingExperiences ? "No matches for these filters" : "Enough signal collected")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundStyle(.white)
-                        Text(store.hasNoMatchingExperiences
-                             ? "Try another budget tier or category to see more date ideas."
-                             : "QDate has what it needs to move from search into a curated match.")
-                            .font(.system(size: 14))
-                            .foregroundStyle(QTheme.muted)
-                            .multilineTextAlignment(.center)
+            if store.currentExperience != nil {
+                HStack(spacing: 48) {
+                    SwipeActionButton(symbol: "xmark", tint: QTheme.warning, size: 64) {
+                        store.swipeCurrent(liked: false)
                     }
-                    .padding(28)
-                    .frame(maxWidth: .infinity, minHeight: 420)
+
+                    SwipeActionButton(symbol: "heart.fill", tint: QTheme.rose, size: 64) {
+                        store.swipeCurrent(liked: true)
+                    }
                 }
             }
         }
-        .frame(height: 360)
     }
 }
 
@@ -1193,6 +1210,7 @@ struct ExperienceCard: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let experience: DateExperience
     let isTop: Bool
+    let cardHeight: CGFloat
     @State private var dragOffset: CGSize = .zero
 
     var body: some View {
@@ -1201,12 +1219,12 @@ struct ExperienceCard: View {
                 .fill(LinearGradient(colors: experience.colors, startPoint: .topLeading, endPoint: .bottomTrailing))
                 .overlay {
                     Image(systemName: experience.symbol)
-                        .font(.system(size: 130, weight: .thin))
+                        .font(.system(size: 150, weight: .thin))
                         .foregroundStyle(.white.opacity(0.18))
-                        .offset(x: 76, y: -96)
+                        .offset(x: 72, y: -150)
                 }
                 .overlay {
-                    LinearGradient(colors: [.clear, .black.opacity(0.75)], startPoint: .center, endPoint: .bottom)
+                    LinearGradient(colors: [.clear, .black.opacity(0.78)], startPoint: .top, endPoint: .bottom)
                 }
 
             VStack(alignment: .leading, spacing: 16) {
@@ -1231,7 +1249,7 @@ struct ExperienceCard: View {
                     Text(experience.description)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.82))
-                        .lineLimit(2)
+                        .lineLimit(3)
                         .fixedSize(horizontal: false, vertical: true)
                     Button {
                         store.showExperienceDetails = experience
@@ -1242,30 +1260,18 @@ struct ExperienceCard: View {
                     }
                     .buttonStyle(.plain)
                 }
-
-                HStack(spacing: 12) {
-                    GlassIconButton(symbol: "xmark", tint: QTheme.warning) {
-                        store.swipeCurrent(liked: false)
-                    }
-                    GlassButton(title: "Details", symbol: "info.circle") {
-                        store.showExperienceDetails = experience
-                    }
-                    GlassIconButton(symbol: "heart.fill", tint: QTheme.rose) {
-                        store.swipeCurrent(liked: true)
-                    }
-                }
             }
             .padding(22)
 
             SwipeIndicator(title: "LIKE", color: QTheme.success, opacity: max(0, dragOffset.width / 120))
                 .rotationEffect(.degrees(-12))
-                .offset(x: 22, y: -310)
+                .offset(x: 22, y: -(cardHeight - 90))
 
             SwipeIndicator(title: "PASS", color: QTheme.warning, opacity: max(0, -dragOffset.width / 120))
                 .rotationEffect(.degrees(12))
-                .offset(x: 210, y: -310)
+                .offset(x: 210, y: -(cardHeight - 90))
         }
-        .frame(height: 360)
+        .frame(height: cardHeight)
         .clipShape(RoundedRectangle(cornerRadius: 34, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 34, style: .continuous).stroke(Color.white.opacity(0.20), lineWidth: 1))
         .shadow(color: QTheme.violet.opacity(0.28), radius: 26, y: 18)
@@ -1289,6 +1295,31 @@ struct ExperienceCard: View {
                     }
                 }
         )
+    }
+}
+
+struct SwipeActionButton: View {
+    let symbol: String
+    var tint: Color = .white
+    var size: CGFloat = 64
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: size * 0.36, weight: .bold))
+                .foregroundStyle(tint)
+                .frame(width: size, height: size)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .circle)
+        .overlay {
+            Circle()
+                .strokeBorder(Color.white.opacity(0.16), lineWidth: 0.8)
+                .allowsHitTesting(false)
+        }
+        .shadow(color: tint.opacity(0.22), radius: 14, y: 6)
     }
 }
 
