@@ -152,11 +152,18 @@ struct DateExperience: Identifiable, Equatable {
     }
 }
 
+struct MatchCompatibilityReason: Identifiable, Equatable {
+    let title: String
+    let detail: String
+
+    var id: String { title }
+}
+
 struct ActiveMatch {
     var name: String
     var age: Int
     var city: String
-    var compatibility: [String]
+    var compatibility: [MatchCompatibilityReason]
     var sharedVibes: [String]
 }
 
@@ -482,9 +489,18 @@ final class DemoStore: ObservableObject {
         age: 21,
         city: "Hamburg",
         compatibility: [
-            "Both prefer intentional first dates over endless texting.",
-            "Shared Sunday evening availability.",
-            "High overlap on calm venues, food, and city walks."
+            MatchCompatibilityReason(
+                title: "Shared interests",
+                detail: "You both have several interests in common, like baking, finance, and politics. That gives you real conversation starters right away."
+            ),
+            MatchCompatibilityReason(
+                title: "Selected experiences",
+                detail: "Matcha date at Café Love Story, Race each other on the track, and Mini cruise on ferry 62 appealed to you both."
+            ),
+            MatchCompatibilityReason(
+                title: "Matching profiles",
+                detail: "Your interests and answers align remarkably well. That's exactly why we believe this match has a lot of potential."
+            )
         ],
         sharedVibes: ["low-pressure", "romantic", "curated", "offline-first"]
     )
@@ -1745,9 +1761,14 @@ struct MatchCockpit: View {
                             .foregroundStyle(QTheme.muted)
                     }
 
-                    VStack(spacing: 10) {
-                        ForEach(store.match.compatibility, id: \.self) { reason in
-                            CompatibilityReason(text: reason)
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Why you make a great match")
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        ForEach(store.match.compatibility) { reason in
+                            CompatibilityReason(title: reason.title, detail: reason.detail)
                         }
                     }
                 }
@@ -1836,16 +1857,22 @@ struct AvatarOrb: View {
 }
 
 struct CompatibilityReason: View {
-    let text: String
+    let title: String
+    let detail: String
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "checkmark.seal.fill")
                 .foregroundStyle(QTheme.success)
-            Text(text)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.82))
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
+                Text(detail)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(QTheme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Spacer()
         }
         .padding(12)
@@ -2070,8 +2097,8 @@ struct DatePlanReadyView: View {
                     .buttonStyle(.plain)
 
                     if expanded {
-                        ForEach(store.match.compatibility, id: \.self) { reason in
-                            CompatibilityReason(text: reason)
+                        ForEach(store.match.compatibility) { reason in
+                            CompatibilityReason(title: reason.title, detail: reason.detail)
                         }
                     }
                 }
