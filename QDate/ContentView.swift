@@ -105,6 +105,94 @@ enum PartnerSlotStatus: String {
     }
 }
 
+enum Weekday: String, CaseIterable, Identifiable {
+    case monday
+    case tuesday
+    case wednesday
+    case thursday
+    case friday
+    case saturday
+    case sunday
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .monday: "Monday"
+        case .tuesday: "Tuesday"
+        case .wednesday: "Wednesday"
+        case .thursday: "Thursday"
+        case .friday: "Friday"
+        case .saturday: "Saturday"
+        case .sunday: "Sunday"
+        }
+    }
+}
+
+struct AvailabilityTimeSlot: Identifiable, Equatable {
+    let id: UUID
+    var weekday: Weekday
+    var startTime: Date
+    var endTime: Date
+
+    init(
+        id: UUID = UUID(),
+        weekday: Weekday,
+        startHour: Int,
+        startMinute: Int,
+        endHour: Int,
+        endMinute: Int
+    ) {
+        self.id = id
+        self.weekday = weekday
+        let calendar = Calendar.current
+        self.startTime = calendar.date(bySettingHour: startHour, minute: startMinute, second: 0, of: .now) ?? .now
+        self.endTime = calendar.date(bySettingHour: endHour, minute: endMinute, second: 0, of: .now) ?? .now
+    }
+}
+
+enum DateFilterCatalog {
+    static let tiers = ["Light", "Medium", "Premium"]
+
+    static let categoriesByTier: [String: [String]] = [
+        "Light": [
+            "Café meetup",
+            "Nature experience",
+            "Museums",
+            "Sightseeing",
+            "Viewpoints",
+            "Food & drinks",
+            "Other"
+        ],
+        "Medium": [
+            "Museums",
+            "Cinema",
+            "Action",
+            "Sightseeing",
+            "Other"
+        ],
+        "Premium": [
+            "Museums",
+            "Theatre",
+            "Opera",
+            "Action",
+            "Sightseeing",
+            "Other"
+        ]
+    ]
+
+    static var allCategories: [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+        for tier in tiers {
+            for category in categoriesByTier[tier] ?? [] where seen.insert(category).inserted {
+                result.append(category)
+            }
+        }
+        return result
+    }
+}
+
 @MainActor
 final class DemoStore: ObservableObject {
     @Published var selectedTab: AppTab = .home
@@ -114,6 +202,8 @@ final class DemoStore: ObservableObject {
     @Published var likedExperienceIDs: Set<String> = []
     @Published var dislikedExperienceIDs: Set<String> = []
     @Published var selectedTimeSlotIDs: Set<UUID> = []
+    @Published var appliedBudgetTiers: Set<String> = Set(DateFilterCatalog.tiers)
+    @Published var appliedFilterCategories: Set<String> = Set(DateFilterCatalog.allCategories)
     @Published var selectedBudget = "Premium"
     @Published var selectedGender = "Women"
     @Published var minAge = 25.0
@@ -145,6 +235,11 @@ final class DemoStore: ObservableObject {
     @Published var childhoodDream = "Architect"
     @Published var currentPath = "Founder building relationship technology"
     @Published var profileQuestionSlots = Array(repeating: ProfileQuestionSlot(), count: 5)
+    @Published var weeklyAvailability: [AvailabilityTimeSlot] = [
+        AvailabilityTimeSlot(weekday: .friday, startHour: 19, startMinute: 30, endHour: 22, endMinute: 0),
+        AvailabilityTimeSlot(weekday: .sunday, startHour: 19, startMinute: 0, endHour: 21, endMinute: 0),
+        AvailabilityTimeSlot(weekday: .tuesday, startHour: 20, startMinute: 0, endHour: 22, endMinute: 0)
+    ]
 
     let user = DemoUser(
         name: "Chris",
@@ -241,7 +336,7 @@ final class DemoStore: ObservableObject {
         DateExperience(
             id: "jazz",
             title: "Listening Room",
-            category: "Music",
+            category: "Theatre",
             location: "St. Pauli",
             budget: "Premium",
             description: "A quiet jazz set, two reserved seats, and a short walk after the encore.",
@@ -251,7 +346,7 @@ final class DemoStore: ObservableObject {
         DateExperience(
             id: "wine",
             title: "Natural Wine Hour",
-            category: "Drinks",
+            category: "Other",
             location: "Schanze",
             budget: "Medium",
             description: "A small table, one guided flight, and conversation prompts that do not feel forced.",
@@ -261,7 +356,7 @@ final class DemoStore: ObservableObject {
         DateExperience(
             id: "harbor",
             title: "Harbor Glow Walk",
-            category: "Walk",
+            category: "Nature experience",
             location: "HafenCity",
             budget: "Light",
             description: "A scenic route, warm drinks, and one good place to stop if the chemistry is there.",
@@ -271,7 +366,7 @@ final class DemoStore: ObservableObject {
         DateExperience(
             id: "chef",
             title: "Counter Dinner",
-            category: "Food",
+            category: "Action",
             location: "Eimsbuettel",
             budget: "Premium",
             description: "Two seats at the chef counter where the plan feels special without becoming stiff.",
@@ -281,7 +376,7 @@ final class DemoStore: ObservableObject {
         DateExperience(
             id: "gallery",
             title: "After-Hours Gallery",
-            category: "Culture",
+            category: "Museums",
             location: "Altona",
             budget: "Medium",
             description: "A compact exhibition, one shared favorite piece, and a reservation nearby.",
@@ -296,9 +391,43 @@ final class DemoStore: ObservableObject {
         TimeSlot(day: "Sunday", time: "19:00", note: "Best fit for both calendars", partnerStatus: .accepted)
     ]
 
+    var filteredExperiences: [DateExperience] {
+        experiences.filter { experience in
+            appliedBudgetTiers.contains(experience.budget) &&
+            appliedFilterCategories.contains(experience.category)
+        }
+    }
+
     var currentExperience: DateExperience? {
-        guard selectedExperienceIndex < experiences.count else { return nil }
-        return experiences[selectedExperienceIndex]
+        guard selectedExperienceIndex < filteredExperiences.count else { return nil }
+        return filteredExperiences[selectedExperienceIndex]
+    }
+
+    var hasNoMatchingExperiences: Bool {
+        filteredExperiences.isEmpty
+    }
+
+    func applyFilters(budgetTiers: Set<String>, categories: Set<String>) {
+        appliedBudgetTiers = budgetTiers
+        appliedFilterCategories = categories
+        selectedExperienceIndex = 0
+    }
+
+    func availabilitySlotIDs(for weekday: Weekday) -> [UUID] {
+        weeklyAvailability
+            .filter { $0.weekday == weekday }
+            .sorted { $0.startTime < $1.startTime }
+            .map(\.id)
+    }
+
+    func addAvailabilitySlot(for weekday: Weekday) {
+        weeklyAvailability.append(
+            AvailabilityTimeSlot(weekday: weekday, startHour: 18, startMinute: 0, endHour: 20, endMinute: 0)
+        )
+    }
+
+    func removeAvailabilitySlot(id: UUID) {
+        weeklyAvailability.removeAll { $0.id == id }
     }
 
     var hasEnoughSignal: Bool {
@@ -434,7 +563,7 @@ struct MainShell: View {
         }
         .sheet(isPresented: $store.showFilters) {
             FilterSheet()
-                .presentationDetents([.medium])
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(item: $store.showExperienceDetails) { experience in
@@ -865,7 +994,7 @@ struct ExperienceSwipeDeck: View {
 
     var body: some View {
         ZStack {
-            ForEach(Array(store.experiences.enumerated().reversed()), id: \.element.id) { index, experience in
+            ForEach(Array(store.filteredExperiences.enumerated().reversed()), id: \.element.id) { index, experience in
                 if index >= store.selectedExperienceIndex && index < store.selectedExperienceIndex + 3 {
                     ExperienceCard(
                         experience: experience,
@@ -873,20 +1002,22 @@ struct ExperienceSwipeDeck: View {
                     )
                     .scaleEffect(index == store.selectedExperienceIndex ? 1 : 0.94 - CGFloat(index - store.selectedExperienceIndex) * 0.03)
                     .offset(y: CGFloat(index - store.selectedExperienceIndex) * 14)
-                    .zIndex(Double(store.experiences.count - index))
+                    .zIndex(Double(store.filteredExperiences.count - index))
                 }
             }
 
             if store.currentExperience == nil {
                 GlassCard(cornerRadius: 28) {
                     VStack(spacing: 14) {
-                        Image(systemName: "sparkles.rectangle.stack")
+                        Image(systemName: store.hasNoMatchingExperiences ? "line.3.horizontal.decrease.circle" : "sparkles.rectangle.stack")
                             .font(.system(size: 42))
                             .foregroundStyle(QTheme.electric)
-                        Text("Enough signal collected")
+                        Text(store.hasNoMatchingExperiences ? "No matches for these filters" : "Enough signal collected")
                             .font(.system(size: 22, weight: .bold))
                             .foregroundStyle(.white)
-                        Text("QDate has what it needs to move from search into a curated match.")
+                        Text(store.hasNoMatchingExperiences
+                             ? "Try another budget tier or category to see more date ideas."
+                             : "QDate has what it needs to move from search into a curated match.")
                             .font(.system(size: 14))
                             .foregroundStyle(QTheme.muted)
                             .multilineTextAlignment(.center)
@@ -1458,7 +1589,7 @@ struct CompassScreen: View {
                 }
 
                 PreferenceSection(title: "Weekly availability", locked: store.isCompassLocked) {
-                    AvailabilityGrid(locked: store.isCompassLocked)
+                    WeeklyAvailabilityEditor(locked: store.isCompassLocked)
                 }
 
                 PreferenceSection(title: "Safety and planning", locked: false) {
@@ -1522,6 +1653,61 @@ struct PreferenceSection<Content: View>: View {
     }
 }
 
+struct ChipMultiPicker: View {
+    let options: [String]
+    @Binding var selection: Set<String>
+    let locked: Bool
+    var minimumSelection = 1
+
+    var body: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 98), spacing: 10)], spacing: 10) {
+            ForEach(options, id: \.self) { option in
+                let isSelected = selection.contains(option)
+                Button {
+                    guard !locked else { return }
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.84)) {
+                        if isSelected {
+                            guard selection.count > minimumSelection else { return }
+                            selection.remove(option)
+                        } else {
+                            selection.insert(option)
+                        }
+                    }
+                } label: {
+                    Text(option)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 11)
+                        .background(isSelected ? QTheme.violet.opacity(0.55) : Color.white.opacity(0.08), in: Capsule())
+                        .overlay(Capsule().stroke(Color.white.opacity(isSelected ? 0.34 : 0.10), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .disabled(locked)
+            }
+        }
+    }
+}
+
+struct FilterCategoryChip: View {
+    let title: String
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(selected ? QTheme.violet.opacity(0.48) : Color.white.opacity(0.08), in: Capsule())
+                .overlay(Capsule().stroke(Color.white.opacity(selected ? 0.34 : 0.10), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 struct ChipPicker: View {
     let options: [String]
     @Binding var selection: String
@@ -1551,35 +1737,127 @@ struct ChipPicker: View {
     }
 }
 
-struct AvailabilityGrid: View {
+struct WeeklyAvailabilityEditor: View {
+    @EnvironmentObject private var store: DemoStore
     let locked: Bool
-    private let rows = [
-        ("Fri", "19:30", true),
-        ("Sat", "18:00", false),
-        ("Sun", "19:00", true),
-        ("Tue", "20:00", true)
-    ]
+
+    var body: some View {
+        VStack(spacing: 12) {
+            ForEach(Weekday.allCases) { weekday in
+                WeekdayAvailabilitySection(weekday: weekday, locked: locked)
+            }
+        }
+    }
+}
+
+struct WeekdayAvailabilitySection: View {
+    @EnvironmentObject private var store: DemoStore
+    let weekday: Weekday
+    let locked: Bool
+
+    private var slotIDs: [UUID] {
+        store.availabilitySlotIDs(for: weekday)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(weekday.title)
+                    .font(.system(size: 15, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                Spacer()
+                if !locked {
+                    Button {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.84)) {
+                            store.addAvailabilitySlot(for: weekday)
+                        }
+                    } label: {
+                        Label("Add slot", systemImage: "plus.circle.fill")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(QTheme.electric)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            if slotIDs.isEmpty {
+                Text("No availability added")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(QTheme.muted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 4)
+            } else {
+                ForEach(slotIDs, id: \.self) { slotID in
+                    if let index = store.weeklyAvailability.firstIndex(where: { $0.id == slotID }) {
+                        AvailabilitySlotRow(
+                            startTime: $store.weeklyAvailability[index].startTime,
+                            endTime: $store.weeklyAvailability[index].endTime,
+                            locked: locked
+                        ) {
+                            withAnimation(.spring(response: 0.28, dampingFraction: 0.84)) {
+                                store.removeAvailabilitySlot(id: slotID)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+struct AvailabilitySlotRow: View {
+    @Binding var startTime: Date
+    @Binding var endTime: Date
+    let locked: Bool
+    let onDelete: () -> Void
 
     var body: some View {
         VStack(spacing: 10) {
-            ForEach(rows, id: \.0) { row in
-                HStack {
-                    Text(row.0)
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 42, alignment: .leading)
-                    Text(row.1)
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(QTheme.muted)
-                    Spacer()
-                    Text(row.2 ? "Open" : "Blocked")
+            HStack(spacing: 12) {
+                Text("Start")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(QTheme.muted)
+                    .frame(width: 42, alignment: .leading)
+                DatePicker("", selection: $startTime, displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+                    .datePickerStyle(.compact)
+                    .tint(QTheme.electric)
+                    .disabled(locked)
+                    .onChange(of: startTime) { _, newStart in
+                        if endTime <= newStart {
+                            endTime = Calendar.current.date(byAdding: .hour, value: 2, to: newStart) ?? newStart
+                        }
+                    }
+                Spacer()
+            }
+
+            HStack(spacing: 12) {
+                Text("End")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(QTheme.muted)
+                    .frame(width: 42, alignment: .leading)
+                DatePicker("", selection: $endTime, in: startTime..., displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+                    .datePickerStyle(.compact)
+                    .tint(QTheme.electric)
+                    .disabled(locked)
+                Spacer()
+            }
+
+            if !locked {
+                Button(action: onDelete) {
+                    Label("Remove slot", systemImage: "trash")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(row.2 ? QTheme.success : QTheme.warning)
+                        .foregroundStyle(QTheme.warning)
                 }
-                .padding(12)
-                .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
+        .padding(12)
+        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
@@ -2019,26 +2297,85 @@ struct DetailLine: View {
 
 struct FilterSheet: View {
     @EnvironmentObject private var store: DemoStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var draftBudgetTiers: Set<String> = []
+    @State private var draftCategories: Set<String> = []
+
+    private var isValid: Bool {
+        !draftBudgetTiers.isEmpty && !draftCategories.isEmpty
+    }
+
+    private var sortedSelectedTiers: [String] {
+        DateFilterCatalog.tiers.filter { draftBudgetTiers.contains($0) }
+    }
 
     var body: some View {
         ZStack {
             AppBackground()
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 16) {
                 Text("Date filters")
                     .font(.system(size: 30, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
-                PreferenceSection(title: "Budget tier", locked: false) {
-                    ChipPicker(options: ["Light", "Medium", "Premium"], selection: $store.selectedBudget, locked: false)
+
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 20) {
+                        PreferenceSection(title: "Budget tier", locked: false) {
+                            ChipMultiPicker(
+                                options: DateFilterCatalog.tiers,
+                                selection: $draftBudgetTiers,
+                                locked: false,
+                                minimumSelection: 1
+                            )
+                        }
+
+                        if sortedSelectedTiers.isEmpty {
+                            Text("Select at least one budget tier to see categories.")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(QTheme.muted)
+                        } else {
+                            ForEach(sortedSelectedTiers, id: \.self) { tier in
+                                PreferenceSection(title: "\(tier) categories", locked: false) {
+                                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 116), spacing: 8)], spacing: 8) {
+                                        ForEach(DateFilterCatalog.categoriesByTier[tier] ?? [], id: \.self) { category in
+                                            FilterCategoryChip(
+                                                title: category,
+                                                selected: draftCategories.contains(category)
+                                            ) {
+                                                withAnimation(.spring(response: 0.28, dampingFraction: 0.84)) {
+                                                    if draftCategories.contains(category) {
+                                                        draftCategories.remove(category)
+                                                    } else {
+                                                        draftCategories.insert(category)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
-                PreferenceSection(title: "Categories", locked: false) {
-                    TagWrap(tags: ["Music", "Food", "Walk", "Culture", "Drinks"])
+
+                if !isValid {
+                    Text("Pick at least one budget tier and one category.")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(QTheme.warning)
                 }
-                Spacer()
+
                 GlassButton(title: "Apply Filters", symbol: "checkmark", prominent: true) {
+                    store.applyFilters(budgetTiers: draftBudgetTiers, categories: draftCategories)
                     store.showFilters = false
+                    dismiss()
                 }
+                .opacity(isValid ? 1 : 0.45)
+                .disabled(!isValid)
             }
             .padding(20)
+        }
+        .onAppear {
+            draftBudgetTiers = store.appliedBudgetTiers
+            draftCategories = store.appliedFilterCategories
         }
     }
 }
