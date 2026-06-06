@@ -1,6 +1,10 @@
 import SwiftUI
 import UIKit
 
+private enum SwipeDeckMotion {
+    static let postSwipeDuration: Double = 0.35
+}
+
 enum AppTab: String, CaseIterable {
     case home = "Home"
     case compass = "Compass"
@@ -694,7 +698,7 @@ final class DemoStore: ObservableObject {
         totalSwipeCount += 1
         let shouldBeginMatchFlow = totalSwipeCount >= 4
 
-        withAnimation(.easeInOut(duration: 0.6)) {
+        withAnimation(.easeInOut(duration: SwipeDeckMotion.postSwipeDuration)) {
             readinessScore = min(100, readinessScore + (liked ? 13 : 8))
             if !filteredExperiences.isEmpty {
                 selectedExperienceIndex = min(
@@ -1271,7 +1275,7 @@ struct ReadinessCard: View {
                             .foregroundStyle(QTheme.electric)
                             .monospacedDigit()
                             .contentTransition(.numericText(value: store.readinessScore))
-                            .animation(.easeInOut(duration: 0.6), value: store.readinessScore)
+                            .animation(.easeInOut(duration: SwipeDeckMotion.postSwipeDuration), value: store.readinessScore)
                     }
                     .contentShape(Rectangle())
                 }
