@@ -708,7 +708,7 @@ struct MainShell: View {
                 Spacer()
                 GlassTabBar()
                     .padding(.horizontal, 18)
-                    .padding(.bottom, 12)
+                    .padding(.bottom, 6)
             }
         }
         .sheet(isPresented: $store.showFilters) {
@@ -874,9 +874,9 @@ struct GlassHeader: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text("QDate")
-                        .font(.system(size: 30, weight: .semibold, design: .serif))
+                        .font(.system(size: 26, weight: .semibold, design: .serif))
                         .tracking(0.5)
                         .foregroundStyle(QTheme.electric)
 
@@ -912,8 +912,8 @@ struct GlassHeader: View {
                 .accessibilityLabel("QDate help")
             }
             .padding(.horizontal, 22)
-            .padding(.top, 6)
-            .padding(.bottom, 14)
+            .padding(.top, 2)
+            .padding(.bottom, 8)
         }
         .frame(maxWidth: .infinity)
         .background {
@@ -1017,7 +1017,7 @@ struct GlassTabBar: View {
                     }
                     .foregroundStyle(selected ? .white : Color.white.opacity(0.6))
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, 11)
                     .background {
                         if selected {
                             Capsule(style: .continuous)
@@ -1072,7 +1072,7 @@ struct HomeScreen: View {
             }
             .padding(.horizontal, 18)
             .padding(.top, 18)
-            .padding(.bottom, 112)
+            .padding(.bottom, 96)
         }
     }
 }
@@ -1832,7 +1832,7 @@ struct CompassScreen: View {
             }
             .padding(.horizontal, 18)
             .padding(.top, 18)
-            .padding(.bottom, 112)
+            .padding(.bottom, 96)
         }
     }
 }
@@ -2223,7 +2223,7 @@ struct ProfileScreen: View {
                 }
                 .padding(.horizontal, 18)
                 .padding(.top, 18)
-                .padding(.bottom, 112)
+                .padding(.bottom, 96)
             }
             .toolbar(.hidden, for: .navigationBar)
         }
