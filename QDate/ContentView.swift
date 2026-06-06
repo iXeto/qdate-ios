@@ -359,7 +359,7 @@ final class DemoStore: ObservableObject {
 
     let user = DemoUser(
         name: "Chris",
-        age: 29,
+        age: 22,
         city: "Hamburg",
         vibe: "Heart · Optimist · Introvert · Spontaneous · Tidy",
         bio: "Looking for intentional dates that feel easy, thoughtful, and a little cinematic.",
@@ -437,8 +437,8 @@ final class DemoStore: ObservableObject {
     }
 
     let match = ActiveMatch(
-        name: "Ava",
-        age: 28,
+        name: "Leila",
+        age: 21,
         city: "Hamburg",
         compatibility: [
             "Both prefer intentional first dates over endless texting.",
@@ -493,7 +493,8 @@ final class DemoStore: ObservableObject {
             description: "You ride ferry 62 together across the Elbe and experience Hamburg from the water. The route passes the harbor, cranes, and Elbe views, turning a simple meetup into a small Hamburg experience.",
             symbol: "ferry.fill",
             colors: [Color(red: 0.12, green: 0.38, blue: 0.62), Color(red: 0.22, green: 0.52, blue: 0.78)],
-            activity: "Ferry ride on the Elbe"
+            activity: "Ferry ride on the Elbe",
+            backgroundImageName: "CardBackgrounds/Ferry_62"
         ),
         DateExperience(
             id: "board-game-cafe",
@@ -1102,13 +1103,6 @@ struct HomeScreen: View {
         ScrollViewReader { proxy in
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 18) {
-                    if store.isInMatchFlow {
-                        HStack {
-                            Spacer()
-                            CancelMatchButton()
-                        }
-                    }
-
                     switch store.stage {
                     case .activeSearch:
                         ActiveSearchView {
@@ -1127,7 +1121,13 @@ struct HomeScreen: View {
                 case .datePlanReady:
                     DatePlanReadyView()
                 }
-            }
+
+                    if store.isInMatchFlow {
+                        CancelMatchButton()
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 12)
+                    }
+                }
                 .padding(.horizontal, 18)
                 .padding(.top, 18)
                 .padding(.bottom, 96)
@@ -1598,6 +1598,8 @@ struct CompatibilityReason: View {
 }
 
 struct TimelineCard: View {
+    @EnvironmentObject private var store: DemoStore
+
     var body: some View {
         GlassCard(cornerRadius: 22) {
             VStack(alignment: .leading, spacing: 14) {
@@ -1605,7 +1607,7 @@ struct TimelineCard: View {
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(.white)
                 TimelineRow(done: true, title: "Preferences learned", detail: "Date ideas and readiness signal collected.")
-                TimelineRow(done: true, title: "Match confirmed", detail: "Ava fits your intent and vibe.")
+                TimelineRow(done: true, title: "Match confirmed", detail: "\(store.match.name) fits your intent and vibe.")
                 TimelineRow(done: false, title: "Coordinate time", detail: "Choose shared availability.")
                 TimelineRow(done: false, title: "QDate plans", detail: "Venue, route, meeting point, and plan.")
             }
@@ -1649,7 +1651,7 @@ struct WaitingForMatchView: View {
                     Text("Your times are saved")
                         .font(.system(size: 25, weight: .semibold, design: .serif))
                         .foregroundStyle(.white)
-                    Text("QDate is waiting for Ava to confirm a shared window. You can still edit your choices.")
+                    Text("QDate is waiting for \(store.match.name) to confirm a shared window. You can still edit your choices.")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(QTheme.muted)
                         .multilineTextAlignment(.center)
@@ -1673,7 +1675,7 @@ struct SharedTimeFoundView: View {
 
     var body: some View {
         VStack(spacing: 18) {
-            PlanningTicket(title: "Shared time found", status: "Sunday 19:00", detail: "Ava accepted your strongest slot. QDate can now plan the actual date.")
+            PlanningTicket(title: "Shared time found", status: "Sunday 19:00", detail: "\(store.match.name) accepted your strongest slot. QDate can now plan the actual date.")
             GlassButton(title: "Let QDate Plan It", symbol: "wand.and.stars", prominent: true) {
                 store.startPlanning()
             }
@@ -2926,17 +2928,14 @@ struct TimeCoordinationSheet: View {
                         Text("Coordinate time")
                             .font(.system(size: 32, weight: .semibold, design: .serif))
                             .foregroundStyle(.white)
-                        Text("Select every slot that works. Ava's status updates as QDate coordinates.")
+                        Text("Select every slot that works. \(store.match.name)'s status updates as QDate coordinates.")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(QTheme.muted)
                     }
                     Spacer()
-                    VStack(alignment: .trailing, spacing: 10) {
-                        GlassIconButton(symbol: "xmark") {
-                            store.showTimeCoordination = false
-                            dismiss()
-                        }
-                        CancelMatchButton()
+                    GlassIconButton(symbol: "xmark") {
+                        store.showTimeCoordination = false
+                        dismiss()
                     }
                 }
 
@@ -2965,6 +2964,10 @@ struct TimeCoordinationSheet: View {
                         store.submitTimes()
                     }
                 }
+
+                CancelMatchButton()
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 4)
             }
             .padding(20)
         }
