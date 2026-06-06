@@ -876,7 +876,7 @@ struct GlassHeader: View {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("QDate")
-                        .font(.system(size: 30, weight: .bold, design: .serif))
+                        .font(.system(size: 30, weight: .semibold, design: .serif))
                         .tracking(0.5)
                         .foregroundStyle(QTheme.electric)
 
@@ -950,7 +950,7 @@ struct QDateHelpSheet: View {
             AppBackground()
             VStack(alignment: .leading, spacing: 18) {
                 Text("How QDate works")
-                    .font(.system(size: 30, weight: .black, design: .serif))
+                    .font(.system(size: 30, weight: .semibold, design: .serif))
                     .foregroundStyle(.white)
 
                 HelpRow(symbol: "sparkles", title: "Search stays active", detail: "QDate learns from date ideas and readiness signals.")
@@ -1086,7 +1086,7 @@ struct ActiveSearchView: View {
 
             HStack {
                 Text("Swipe date ideas")
-                    .font(.system(size: 22, weight: .bold, design: .serif))
+                    .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(.white)
                 Spacer()
                 GlassIconButton(symbol: "slider.horizontal.3") {
@@ -1125,7 +1125,7 @@ struct ReadinessCard: View {
                     }
                     Spacer()
                     Text("\(Int(store.readinessScore))%")
-                        .font(.system(size: 28, weight: .black, design: .serif))
+                        .font(.system(size: 28, weight: .heavy))
                         .foregroundStyle(QTheme.electric)
                 }
 
@@ -1273,7 +1273,7 @@ struct ExperienceCard: View {
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(QTheme.electric)
                     Text(experience.title)
-                        .font(.system(size: 30, weight: .black, design: .serif))
+                        .font(.system(size: 30, weight: .semibold, design: .serif))
                         .foregroundStyle(.white)
                         .lineLimit(2)
                     Text(experience.description)
@@ -1360,7 +1360,7 @@ struct SwipeIndicator: View {
 
     var body: some View {
         Text(title)
-            .font(.system(size: 28, weight: .black, design: .serif))
+            .font(.system(size: 28, weight: .black))
             .foregroundStyle(color)
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
@@ -1458,7 +1458,7 @@ struct MatchCockpit: View {
 
                     VStack(spacing: 6) {
                         Text("You and \(store.match.name), \(store.match.age)")
-                            .font(.system(size: 26, weight: .black, design: .serif))
+                            .font(.system(size: 26, weight: .semibold, design: .serif))
                             .foregroundStyle(.white)
                         Text("QDate found a high-intent match in \(store.match.city).")
                             .font(.system(size: 14, weight: .semibold))
@@ -1583,7 +1583,7 @@ struct WaitingForMatchView: View {
                         .font(.system(size: 46, weight: .semibold))
                         .foregroundStyle(QTheme.electric)
                     Text("Your times are saved")
-                        .font(.system(size: 25, weight: .black, design: .serif))
+                        .font(.system(size: 25, weight: .semibold, design: .serif))
                         .foregroundStyle(.white)
                     Text("QDate is waiting for Ava to confirm a shared window. You can still edit your choices.")
                         .font(.system(size: 15, weight: .semibold))
@@ -1649,7 +1649,7 @@ struct PlanningTicket: View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     Text(title)
-                        .font(.system(size: 24, weight: .black, design: .serif))
+                        .font(.system(size: 24, weight: .semibold, design: .serif))
                         .foregroundStyle(.white)
                     Spacer()
                     Image(systemName: "ticket.fill")
@@ -1698,7 +1698,7 @@ struct DatePlanReadyView: View {
                                 .font(.system(size: 14, weight: .bold))
                                 .foregroundStyle(QTheme.electric)
                             Text("Sunday Date With \(store.match.name)")
-                                .font(.system(size: 30, weight: .black, design: .serif))
+                                .font(.system(size: 30, weight: .semibold, design: .serif))
                                 .foregroundStyle(.white)
                         }
                         Spacer()
@@ -1720,7 +1720,7 @@ struct DatePlanReadyView: View {
                                 .font(.system(size: 12, weight: .bold))
                                 .foregroundStyle(QTheme.muted)
                             Text("1 day 6 hours")
-                                .font(.system(size: 22, weight: .black, design: .serif))
+                                .font(.system(size: 22, weight: .bold))
                                 .foregroundStyle(.white)
                         }
                         Spacer()
@@ -2051,7 +2051,7 @@ struct WeeklyAvailabilityEditScreen: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Edit availability")
-                            .font(.system(size: 30, weight: .black, design: .serif))
+                            .font(.system(size: 30, weight: .semibold, design: .serif))
                             .foregroundStyle(.white)
                         Text("Choose a day, then add or update one time slot.")
                             .font(.system(size: 14, weight: .medium))
@@ -2100,8 +2100,8 @@ struct WeeklyAvailabilityEditScreen: View {
 
                 GlassCard(cornerRadius: 22) {
                     VStack(alignment: .leading, spacing: 16) {
-                        Text(selectedWeekday.title)
-                            .font(.system(size: 22, weight: .black, design: .serif))
+                            Text(selectedWeekday.title)
+                                .font(.system(size: 22, weight: .bold))
                             .foregroundStyle(.white)
 
                         if let index = selectedSlotIndex {
@@ -2253,7 +2253,7 @@ struct ProfileHeader: View {
 
                 VStack(spacing: 5) {
                     Text("\(store.user.name), \(store.user.age)")
-                        .font(.system(size: 28, weight: .black, design: .serif))
+                        .font(.system(size: 28, weight: .semibold, design: .serif))
                         .foregroundStyle(.white)
                     Text(store.user.city)
                         .font(.system(size: 15, weight: .bold))
@@ -2633,7 +2633,7 @@ struct SettingsDetailScreen<Content: View>: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     Text(title)
-                        .font(.system(size: 32, weight: .black, design: .serif))
+                        .font(.system(size: 32, weight: .semibold, design: .serif))
                         .foregroundStyle(.white)
                     GlassCard(cornerRadius: 22) {
                         VStack(spacing: 10) {
@@ -2694,7 +2694,7 @@ struct FilterSheet: View {
             AppBackground()
             VStack(alignment: .leading, spacing: 16) {
                 Text("Date filters")
-                    .font(.system(size: 30, weight: .black, design: .serif))
+                    .font(.system(size: 30, weight: .semibold, design: .serif))
                     .foregroundStyle(.white)
 
                 ScrollView(showsIndicators: false) {
@@ -2833,7 +2833,7 @@ struct ExperienceDetailSheet: View {
                             .foregroundStyle(QTheme.electric)
 
                             Text(experience.title)
-                                .font(.system(size: 32, weight: .black, design: .serif))
+                                .font(.system(size: 32, weight: .semibold, design: .serif))
                                 .foregroundStyle(.white)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -2861,7 +2861,7 @@ struct TimeCoordinationSheet: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 5) {
                         Text("Coordinate time")
-                            .font(.system(size: 32, weight: .black, design: .serif))
+                            .font(.system(size: 32, weight: .semibold, design: .serif))
                             .foregroundStyle(.white)
                         Text("Select every slot that works. Ava's status updates as QDate coordinates.")
                             .font(.system(size: 14, weight: .medium))
@@ -2952,7 +2952,7 @@ struct ProfileEditSheet: View {
                 VStack(alignment: .leading, spacing: 18) {
                     HStack {
                         Text("Edit \(context.title)")
-                            .font(.system(size: 30, weight: .black, design: .serif))
+                            .font(.system(size: 30, weight: .semibold, design: .serif))
                             .foregroundStyle(.white)
                         Spacer()
                         GlassIconButton(symbol: "xmark") {
@@ -3167,8 +3167,8 @@ struct CategorizedInterestPicker: View {
                 VStack(alignment: .leading, spacing: 18) {
                     ForEach(categories) { category in
                         VStack(alignment: .leading, spacing: 10) {
-                            Text(category.title)
-                                .font(.system(size: 15, weight: .black, design: .serif))
+                                Text(category.title)
+                                    .font(.system(size: 15, weight: .bold))
                                 .foregroundStyle(.white)
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: 136), spacing: 8)], spacing: 8) {
                                 ForEach(category.interests, id: \.self) { interest in
@@ -3239,7 +3239,7 @@ struct QuestionSlotEditSheet: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Edit question")
-                                .font(.system(size: 30, weight: .black, design: .serif))
+                                .font(.system(size: 30, weight: .semibold, design: .serif))
                                 .foregroundStyle(.white)
                             Text("Pick one question, then select all answers that fit.")
                                 .font(.system(size: 14, weight: .medium))
@@ -3369,7 +3369,7 @@ struct PhotoEditSheet: View {
             AppBackground()
             VStack(spacing: 18) {
                 Text("Photo editor")
-                    .font(.system(size: 28, weight: .black, design: .serif))
+                    .font(.system(size: 28, weight: .semibold, design: .serif))
                     .foregroundStyle(.white)
                 Text("Demo-safe mock. No camera or library access required.")
                     .font(.system(size: 15, weight: .semibold))
