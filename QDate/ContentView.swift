@@ -539,7 +539,7 @@ final class DemoStore: ObservableObject {
     }
 
     func resetSwipes() {
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+        withAnimation(.easeInOut(duration: 0.6)) {
             likedExperienceIDs.removeAll()
             dislikedExperienceIDs.removeAll()
             selectedExperienceIndex = 0
@@ -576,20 +576,19 @@ final class DemoStore: ObservableObject {
         guard let experience = currentExperience else { return }
         if liked {
             likedExperienceIDs.insert(experience.id)
-            readinessScore = min(100, readinessScore + 13)
             Haptics.success()
         } else {
             dislikedExperienceIDs.insert(experience.id)
-            readinessScore = min(100, readinessScore + 8)
             Haptics.light()
         }
-        withAnimation(.spring(response: 0.42, dampingFraction: 0.82)) {
+        withAnimation(.easeInOut(duration: 0.6)) {
+            readinessScore = min(100, readinessScore + (liked ? 13 : 8))
             selectedExperienceIndex += 1
         }
     }
 
     func revealMatch() {
-        withAnimation(.spring(response: 0.55, dampingFraction: 0.82)) {
+        withAnimation(.easeInOut(duration: 0.6)) {
             readinessScore = max(readinessScore, 86)
             stage = .matchFound
         }
@@ -1114,6 +1113,9 @@ struct ReadinessCard: View {
                 Text("\(Int(store.readinessScore))%")
                     .font(.system(size: 28, weight: .heavy))
                     .foregroundStyle(QTheme.electric)
+                    .monospacedDigit()
+                    .contentTransition(.numericText(value: store.readinessScore))
+                    .animation(.easeInOut(duration: 0.6), value: store.readinessScore)
 
                 Button {
                     store.showFilters = true
@@ -1128,17 +1130,39 @@ struct ReadinessCard: View {
                 .accessibilityLabel("Date filters")
             }
 
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.white.opacity(0.10))
-                    Capsule()
-                        .fill(QTheme.violet)
-                        .frame(width: proxy.size.width * max(0.04, store.readinessScore / 100))
-                        .shadow(color: QTheme.violet.opacity(0.45), radius: 10)
-                }
-            }
-            .frame(height: 10)
+            ReadinessProgressBar(progress: store.readinessScore)
+                .frame(height: 10)
         }
+    }
+}
+
+private struct ReadinessProgressBar: View {
+    var progress: Double
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.white.opacity(0.10))
+                ReadinessProgressFill(progress: progress)
+                    .fill(QTheme.violet)
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .shadow(color: QTheme.violet.opacity(0.45), radius: 10)
+            }
+        }
+    }
+}
+
+private struct ReadinessProgressFill: Shape {
+    var progress: Double
+
+    var animatableData: Double {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        let fillWidth = rect.width * max(0.04, progress / 100)
+        return Capsule().path(in: CGRect(x: 0, y: 0, width: fillWidth, height: rect.height))
     }
 }
 
