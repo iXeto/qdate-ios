@@ -304,6 +304,7 @@ final class DemoStore: ObservableObject {
     @Published var showFilters = false
     @Published var showExperienceDetails: DateExperience?
     @Published var showTimeCoordination = false
+    @Published var showAvailabilityEditor = false
     @Published var showPhotoEditor = false
     @Published var editingProfileSection: ProfileEditContext?
     @Published var editingQuestionSlot: QuestionEditContext?
@@ -661,6 +662,9 @@ struct MainShell: View {
         }
         .fullScreenCover(isPresented: $store.showTimeCoordination) {
             TimeCoordinationSheet()
+        }
+        .fullScreenCover(isPresented: $store.showAvailabilityEditor) {
+            WeeklyAvailabilityEditScreen()
         }
         .sheet(item: $store.editingProfileSection) { context in
             ProfileEditSheet(context: context)
@@ -1828,7 +1832,6 @@ struct ChipPicker: View {
 struct WeeklyAvailabilityEditor: View {
     @EnvironmentObject private var store: DemoStore
     let locked: Bool
-    @State private var showEditSheet = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -1846,7 +1849,7 @@ struct WeeklyAvailabilityEditor: View {
 
             if !locked {
                 Button {
-                    showEditSheet = true
+                    store.showAvailabilityEditor = true
                 } label: {
                     Label("Edit availability", systemImage: "pencil")
                         .font(.system(size: 14, weight: .bold))
@@ -1857,10 +1860,6 @@ struct WeeklyAvailabilityEditor: View {
                 }
                 .buttonStyle(.plain)
             }
-        }
-        .sheet(isPresented: $showEditSheet) {
-            WeeklyAvailabilityEditSheet()
-                .environmentObject(store)
         }
     }
 }
@@ -1896,7 +1895,7 @@ struct AvailabilitySummaryRow: View {
     }
 }
 
-struct WeeklyAvailabilityEditSheet: View {
+struct WeeklyAvailabilityEditScreen: View {
     @EnvironmentObject private var store: DemoStore
     @Environment(\.dismiss) private var dismiss
     @State private var selectedWeekday: Weekday = .monday
@@ -1921,7 +1920,7 @@ struct WeeklyAvailabilityEditSheet: View {
                     }
                     Spacer()
                     GlassIconButton(symbol: "xmark") {
-                        dismiss()
+                        close()
                     }
                 }
 
@@ -2000,11 +1999,16 @@ struct WeeklyAvailabilityEditSheet: View {
                 Spacer()
 
                 GlassButton(title: "Done", symbol: "checkmark", prominent: true) {
-                    dismiss()
+                    close()
                 }
             }
             .padding(20)
         }
+    }
+
+    private func close() {
+        store.showAvailabilityEditor = false
+        dismiss()
     }
 }
 
