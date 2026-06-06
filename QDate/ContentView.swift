@@ -1767,15 +1767,28 @@ struct MatchCockpit: View {
     }
 }
 
+struct CroppedProfilePhoto: View {
+    let imageName: String
+    var size: CGFloat
+    var zoom: CGFloat = 1.32
+    var faceCenterYOffset: CGFloat = 0.05
+
+    var body: some View {
+        Image(imageName)
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .scaleEffect(zoom)
+            .offset(y: size * faceCenterYOffset)
+            .frame(width: size, height: size)
+            .clipShape(Circle())
+    }
+}
+
 struct AccountProfilePhoto: View {
     var size: CGFloat = 118
 
     var body: some View {
-        Image("ProfilePhoto")
-            .resizable()
-            .aspectRatio(contentMode: .fill)
-            .frame(width: size, height: size)
-            .clipShape(Circle())
+        CroppedProfilePhoto(imageName: "ProfilePhoto", size: size)
             .overlay {
                 Circle()
                     .strokeBorder(Color.white.opacity(0.22), lineWidth: 1)
@@ -1794,11 +1807,7 @@ struct AvatarOrb: View {
         VStack(spacing: 8) {
             ZStack {
                 if let imageName {
-                    Image(imageName)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 86, height: 86)
-                        .clipShape(Circle())
+                    CroppedProfilePhoto(imageName: imageName, size: 86)
                         .overlay {
                             Circle()
                                 .strokeBorder(Color.white.opacity(0.28), lineWidth: 0.8)
