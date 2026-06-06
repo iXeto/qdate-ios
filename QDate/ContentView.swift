@@ -315,6 +315,7 @@ final class DemoStore: ObservableObject {
     @Published var stage: SearchStage = .activeSearch
     @Published var readinessScore: Double = 42
     @Published var selectedExperienceIndex = 0
+    @Published var pendingButtonSwipe: ButtonSwipeRequest?
     @Published var likedExperienceIDs: Set<String> = []
     @Published var dislikedExperienceIDs: Set<String> = []
     @Published private(set) var totalSwipeCount = 0
@@ -1281,16 +1282,26 @@ struct ExperienceSwipeDeck: View {
             if store.currentExperience != nil {
                 HStack(spacing: 48) {
                     SwipeActionButton(symbol: "xmark", tint: QTheme.warning, size: 64) {
-                        store.swipeCurrent(liked: false)
+                        if let current = store.currentExperience {
+                            store.pendingButtonSwipe = ButtonSwipeRequest(experienceID: current.id, liked: false)
+                        }
                     }
 
                     SwipeActionButton(symbol: "heart.fill", tint: QTheme.rose, size: 64) {
-                        store.swipeCurrent(liked: true)
+                        if let current = store.currentExperience {
+                            store.pendingButtonSwipe = ButtonSwipeRequest(experienceID: current.id, liked: true)
+                        }
                     }
                 }
             }
         }
     }
+}
+
+struct ButtonSwipeRequest: Equatable {
+    let experienceID: String
+    let liked: Bool
+    let token = UUID()
 }
 
 struct ExperienceCard: View {
@@ -1382,18 +1393,41 @@ struct ExperienceCard: View {
                 }
                 .onEnded { value in
                     guard isTop else { return }
-                    if value.translation.width > 105 {
-                        store.swipeCurrent(liked: true)
-                    } else if value.translation.width < -105 {
-                        store.swipeCurrent(liked: false)
-                    }
-                    withAnimation(.spring(response: 0.36, dampingFraction: 0.78)) {
-                        dragOffset = .zero
+                    let translation = value.translation.width
+                    let predicted = value.predictedEndTranslation.width
+
+                    if translation > Self.commitThreshold || predicted > Self.flickThreshold {
+                        flyOff(liked: true)
+                    } else if translation < -Self.commitThreshold || predicted < -Self.flickThreshold {
+                        flyOff(liked: false)
+                    } else {
+                        withAnimation(.spring(response: 0.36, dampingFraction: 0.78)) {
+                            dragOffset = .zero
+                        }
                     }
                 }
         )
+        .onChange(of: store.pendingButtonSwipe) { request in
+            guard isTop, let request, request.experienceID == experience.id else { return }
+            store.pendingButtonSwipe = nil
+            flyOff(liked: request.liked)
+        }
     }
 
+    private func flyOff(liked: Bool) {
+        let direction: CGFloat = liked ? 1 : -1
+        let targetX = direction * (UIScreen.main.bounds.width + 220)
+        let exitHeight = max(-14, min(14, dragOffset.height * 0.3))
+        withAnimation(.easeOut(duration: 0.32)) {
+            dragOffset = CGSize(width: targetX, height: exitHeight)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.26) {
+            store.swipeCurrent(liked: liked)
+        }
+    }
+
+    private static let commitThreshold: CGFloat = 105
+    private static let flickThreshold: CGFloat = 320
     private static let verticalLimit: CGFloat = 36
 
     private static func dampenedVertical(_ raw: CGFloat) -> CGFloat {
