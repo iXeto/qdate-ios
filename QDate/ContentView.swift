@@ -1741,38 +1741,19 @@ struct MatchCockpit: View {
     @EnvironmentObject private var store: DemoStore
 
     var body: some View {
-        VStack(spacing: 18) {
-            GlassCard(cornerRadius: 30, glow: true) {
-                VStack(spacing: 18) {
-                    HStack(spacing: 16) {
-                        AvatarOrb(name: store.user.name, imageName: "ProfilePhoto", symbol: "person.fill", color: QTheme.violet)
-                        Image(systemName: "heart.fill")
-                            .font(.system(size: 30, weight: .bold))
-                            .foregroundStyle(QTheme.rose)
-                        AvatarOrb(name: store.match.name, symbol: "person.fill", color: QTheme.rose)
-                    }
+        VStack(spacing: 22) {
+            MatchHero()
 
-                    VStack(spacing: 6) {
-                        Text("You and \(store.match.name), \(store.match.age)")
-                            .font(.system(size: 26, weight: .semibold, design: .serif))
-                            .foregroundStyle(.white)
-                        Text("QDate found a high-intent match in \(store.match.city).")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(QTheme.muted)
-                    }
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Why you make a great match")
+                    .font(.system(size: 19, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4)
 
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Why you make a great match")
-                            .font(.system(size: 17, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
-                        ForEach(store.match.compatibility) { reason in
-                            CompatibilityReason(title: reason.title, detail: reason.detail)
-                        }
-                    }
+                ForEach(store.match.compatibility) { reason in
+                    CompatibilityReason(title: reason.title, detail: reason.detail)
                 }
-                .padding(20)
             }
 
             GlassButton(
@@ -1785,6 +1766,147 @@ struct MatchCockpit: View {
 
             TimelineCard()
         }
+    }
+}
+
+struct MatchHero: View {
+    @EnvironmentObject private var store: DemoStore
+    @State private var heartBeat = false
+
+    private let avatarSize: CGFloat = 92
+    private let gap: CGFloat = 72
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("We found a match")
+                .font(.system(size: 30, weight: .bold, design: .serif))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+
+            VStack(spacing: 12) {
+                ZStack {
+                    FloatingConnector(width: gap + avatarSize * 0.5)
+
+                    HStack(spacing: gap) {
+                        HeroAvatar(imageName: "ProfilePhoto", symbol: "person.fill", color: QTheme.violet, size: avatarSize)
+                        HeroAvatar(imageName: nil, symbol: "person.fill", color: QTheme.rose, size: avatarSize)
+                    }
+
+                    heart
+                }
+
+                HStack(spacing: gap) {
+                    Text(store.user.name)
+                        .frame(width: avatarSize)
+                    Text(store.match.name)
+                        .frame(width: avatarSize)
+                }
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(.white)
+            }
+
+            Text("You and \(store.match.name), \(store.match.age) — a high-intent match in \(store.match.city).")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(QTheme.muted)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 8)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 6)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 0.85).repeatForever(autoreverses: true)) {
+                heartBeat = true
+            }
+        }
+    }
+
+    private var heart: some View {
+        ZStack {
+            Circle()
+                .fill(QTheme.midnight)
+                .frame(width: 48, height: 48)
+            Circle()
+                .strokeBorder(QTheme.rose.opacity(0.55), lineWidth: 1.5)
+                .frame(width: 48, height: 48)
+            Image(systemName: "heart.fill")
+                .font(.system(size: 21, weight: .bold))
+                .foregroundStyle(QTheme.rose)
+        }
+        .scaleEffect(heartBeat ? 1.12 : 0.95)
+        .shadow(color: QTheme.rose.opacity(0.5), radius: 12)
+    }
+}
+
+/// Animated lines that "float" between the two profile photos.
+struct FloatingConnector: View {
+    let width: CGFloat
+    @State private var animate = false
+
+    private let lineGradient = LinearGradient(
+        colors: [QTheme.violet.opacity(0), QTheme.electric.opacity(0.8), QTheme.rose.opacity(0)],
+        startPoint: .leading,
+        endPoint: .trailing
+    )
+
+    var body: some View {
+        ZStack {
+            ForEach(0..<3, id: \.self) { i in
+                Capsule()
+                    .fill(lineGradient)
+                    .frame(width: width, height: 1.5)
+                    .offset(y: CGFloat(i - 1) * 11)
+                    .opacity(animate ? 0.85 : 0.25)
+                    .animation(
+                        .easeInOut(duration: 1.6)
+                            .repeatForever(autoreverses: true)
+                            .delay(Double(i) * 0.28),
+                        value: animate
+                    )
+            }
+
+            ForEach(0..<3, id: \.self) { i in
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 4, height: 4)
+                    .shadow(color: QTheme.electric, radius: 4)
+                    .offset(x: animate ? width / 2 - 6 : -width / 2 + 6, y: CGFloat(i - 1) * 11)
+                    .opacity(0.85)
+                    .animation(
+                        .easeInOut(duration: 2.0)
+                            .repeatForever(autoreverses: true)
+                            .delay(Double(i) * 0.45),
+                        value: animate
+                    )
+            }
+        }
+        .frame(width: width, height: 30)
+        .onAppear { animate = true }
+    }
+}
+
+struct HeroAvatar: View {
+    let imageName: String?
+    let symbol: String
+    let color: Color
+    var size: CGFloat = 92
+
+    var body: some View {
+        ZStack {
+            if let imageName {
+                CroppedProfilePhoto(imageName: imageName, size: size)
+            } else {
+                Image(systemName: symbol)
+                    .font(.system(size: size * 0.34, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.92))
+                    .frame(width: size, height: size)
+                    .background(color.opacity(0.42), in: Circle())
+            }
+        }
+        .overlay {
+            Circle().strokeBorder(Color.white.opacity(0.3), lineWidth: 2)
+        }
+        .shadow(color: color.opacity(0.4), radius: 18, y: 8)
     }
 }
 
@@ -1861,22 +1983,27 @@ struct CompatibilityReason: View {
     let detail: String
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: 12) {
             Image(systemName: "checkmark.seal.fill")
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(QTheme.success)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(.white)
                 Text(detail)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(QTheme.muted)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer()
+            Spacer(minLength: 0)
         }
-        .padding(12)
-        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(14)
+        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
+        }
     }
 }
 
