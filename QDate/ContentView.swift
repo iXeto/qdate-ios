@@ -596,6 +596,22 @@ enum QTheme {
     static let muted = Color.white.opacity(0.68)
     static let success = Color(red: 0.34, green: 0.95, blue: 0.66)
     static let warning = Color(red: 1.0, green: 0.60, blue: 0.28)
+
+    /// Signature gradient used for brand marks and prominent accents.
+    static let brandGradient = LinearGradient(
+        colors: [electric, violet, rose],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    static let accentGradient = LinearGradient(
+        colors: [violet, rose],
+        startPoint: .leading,
+        endPoint: .trailing
+    )
+
+    /// Soft tint poured into Liquid Glass surfaces to keep the dark, foggy mood.
+    static let glassTint = Color(red: 0.10, green: 0.06, blue: 0.20)
 }
 
 enum Haptics {
@@ -722,26 +738,28 @@ struct GlassCard<Content: View>: View {
 
     var body: some View {
         content
-            .background {
+            .glassEffect(
+                glow ? .regular.tint(QTheme.violet.opacity(0.22)) : .regular.tint(QTheme.glassTint.opacity(0.35)),
+                in: .rect(cornerRadius: cornerRadius)
+            )
+            .overlay {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .fill(Color.white.opacity(0.07))
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.40), Color.white.opacity(0.04)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 0.8
                     )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .stroke(
-                                LinearGradient(
-                                    colors: [Color.white.opacity(0.42), Color.white.opacity(0.08)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1
-                            )
-                    )
-                    .shadow(color: glow ? QTheme.violet.opacity(0.38) : Color.black.opacity(0.28), radius: glow ? 30 : 18, x: 0, y: 16)
+                    .allowsHitTesting(false)
             }
+            .shadow(
+                color: glow ? QTheme.violet.opacity(0.40) : Color.black.opacity(0.30),
+                radius: glow ? 32 : 18,
+                x: 0,
+                y: 16
+            )
     }
 }
 
@@ -763,16 +781,22 @@ struct GlassButton: View {
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background {
-                Capsule(style: .continuous)
-                    .fill(prominent ? QTheme.violet.opacity(0.62) : Color.white.opacity(0.10))
-                    .background(.ultraThinMaterial, in: Capsule(style: .continuous))
-                    .overlay(Capsule(style: .continuous).stroke(Color.white.opacity(0.20), lineWidth: 1))
-                    .shadow(color: prominent ? QTheme.violet.opacity(0.35) : .clear, radius: 20, y: 10)
-            }
+            .padding(.vertical, 15)
+            .contentShape(Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
+        .glassEffect(
+            prominent
+                ? .regular.tint(QTheme.violet.opacity(0.55)).interactive()
+                : .regular.interactive(),
+            in: .capsule
+        )
+        .overlay {
+            Capsule(style: .continuous)
+                .strokeBorder(Color.white.opacity(prominent ? 0.28 : 0.16), lineWidth: 0.8)
+                .allowsHitTesting(false)
+        }
+        .shadow(color: prominent ? QTheme.violet.opacity(0.42) : .clear, radius: 20, y: 10)
     }
 }
 
@@ -786,15 +810,16 @@ struct GlassIconButton: View {
             Image(systemName: symbol)
                 .font(.system(size: 17, weight: .bold))
                 .foregroundStyle(tint)
-                .frame(width: 48, height: 48)
-                .background {
-                    Circle()
-                        .fill(Color.white.opacity(0.10))
-                        .background(.ultraThinMaterial, in: Circle())
-                        .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1))
-                }
+                .frame(width: 50, height: 50)
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .circle)
+        .overlay {
+            Circle()
+                .strokeBorder(Color.white.opacity(0.16), lineWidth: 0.8)
+                .allowsHitTesting(false)
+        }
     }
 }
 
@@ -803,18 +828,20 @@ struct GlassHeader: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("QDate")
-                        .font(.system(size: 28, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
+                        .font(.system(size: 32, weight: .black, design: .rounded))
+                        .tracking(-0.5)
+                        .foregroundStyle(QTheme.brandGradient)
+                        .shadow(color: QTheme.violet.opacity(0.45), radius: 12, x: 0, y: 3)
 
-                    HStack(spacing: 6) {
+                    HStack(spacing: 5) {
                         Image(systemName: "location.fill")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(QTheme.electric)
                         Text("Hamburg")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(QTheme.muted)
                     }
                 }
@@ -828,20 +855,21 @@ struct GlassHeader: View {
                     Image(systemName: "questionmark")
                         .font(.system(size: 17, weight: .black))
                         .foregroundStyle(.white)
-                        .frame(width: 42, height: 42)
-                        .background {
-                            Circle()
-                                .fill(Color.white.opacity(0.10))
-                                .background(.ultraThinMaterial, in: Circle())
-                                .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1))
-                        }
+                        .frame(width: 44, height: 44)
+                        .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
+                .glassEffect(.regular.interactive(), in: .circle)
+                .overlay {
+                    Circle()
+                        .strokeBorder(Color.white.opacity(0.16), lineWidth: 0.8)
+                        .allowsHitTesting(false)
+                }
                 .accessibilityLabel("QDate help")
             }
             .padding(.horizontal, 22)
-            .padding(.top, 8)
-            .padding(.bottom, 13)
+            .padding(.top, 6)
+            .padding(.bottom, 14)
         }
         .frame(maxWidth: .infinity)
         .background {
@@ -849,7 +877,7 @@ struct GlassHeader: View {
                 .fill(.ultraThinMaterial)
                 .overlay(
                     LinearGradient(
-                        colors: [Color.white.opacity(0.08), Color.white.opacity(0.02)],
+                        colors: [Color.white.opacity(0.10), Color.clear],
                         startPoint: .top,
                         endPoint: .bottom
                     )
@@ -857,9 +885,12 @@ struct GlassHeader: View {
                 .ignoresSafeArea(edges: .top)
         }
         .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Color.white.opacity(0.10))
-                .frame(height: 1)
+            LinearGradient(
+                colors: [Color.white.opacity(0.18), Color.white.opacity(0.02)],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(height: 1)
         }
         .sheet(isPresented: $showHelp) {
             QDateHelpSheet()
@@ -922,41 +953,55 @@ struct GlassTabBar: View {
     var body: some View {
         HStack(spacing: 6) {
             ForEach(AppTab.allCases, id: \.self) { tab in
+                let selected = store.selectedTab == tab
                 Button {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.78)) {
                         store.selectedTab = tab
                     }
                     Haptics.light()
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: tab.symbol)
-                        if store.selectedTab == tab {
+                            .font(.system(size: 16, weight: .semibold))
+                            .symbolVariant(selected ? .fill : .none)
+                        if selected {
                             Text(tab.rawValue)
                                 .font(.system(size: 13, weight: .bold))
+                                .fixedSize()
+                                .transition(.opacity.combined(with: .scale(scale: 0.7)))
                         }
                     }
-                    .foregroundStyle(store.selectedTab == tab ? .white : Color.white.opacity(0.62))
+                    .foregroundStyle(selected ? .white : Color.white.opacity(0.6))
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 13)
+                    .padding(.vertical, 14)
                     .background {
-                        if store.selectedTab == tab {
-                            Capsule()
-                                .fill(QTheme.violet.opacity(0.45))
+                        if selected {
+                            Capsule(style: .continuous)
+                                .fill(QTheme.accentGradient)
+                                .shadow(color: QTheme.violet.opacity(0.55), radius: 12, y: 4)
                                 .matchedGeometryEffect(id: "activeTab", in: namespace)
                         }
                     }
+                    .contentShape(Capsule(style: .continuous))
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(6)
-        .background {
-            Capsule()
-                .fill(Color.white.opacity(0.08))
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay(Capsule().stroke(Color.white.opacity(0.18), lineWidth: 1))
-                .shadow(color: Color.black.opacity(0.34), radius: 24, y: 14)
+        .glassEffect(.regular.tint(QTheme.glassTint.opacity(0.4)), in: .capsule)
+        .overlay {
+            Capsule(style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.35), Color.white.opacity(0.05)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.8
+                )
+                .allowsHitTesting(false)
         }
+        .shadow(color: Color.black.opacity(0.38), radius: 26, y: 16)
     }
 }
 
@@ -1359,14 +1404,17 @@ struct AvatarOrb: View {
     var body: some View {
         VStack(spacing: 8) {
             ZStack {
-                Circle()
-                    .fill(color.opacity(0.28))
-                    .background(.ultraThinMaterial, in: Circle())
-                    .overlay(Circle().stroke(Color.white.opacity(0.26), lineWidth: 1))
-                    .shadow(color: color.opacity(0.35), radius: 20, y: 8)
                 Image(systemName: symbol)
                     .font(.system(size: 28, weight: .semibold))
                     .foregroundStyle(.white)
+                    .frame(width: 86, height: 86)
+                    .glassEffect(.regular.tint(color.opacity(0.45)), in: .circle)
+                    .overlay {
+                        Circle()
+                            .strokeBorder(Color.white.opacity(0.28), lineWidth: 0.8)
+                            .allowsHitTesting(false)
+                    }
+                    .shadow(color: color.opacity(0.40), radius: 20, y: 8)
             }
             .frame(width: 86, height: 86)
             Text(name)
