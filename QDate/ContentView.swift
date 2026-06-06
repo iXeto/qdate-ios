@@ -1083,6 +1083,7 @@ struct ActiveSearchView: View {
     var body: some View {
         VStack(spacing: 14) {
             ReadinessCard()
+                .padding(.bottom, 20)
 
             ExperienceSwipeDeck()
 
