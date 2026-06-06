@@ -26,6 +26,78 @@ enum SearchStage: String {
 
 }
 
+enum VibeDimension: String, CaseIterable, Identifiable {
+    case decisionStyle
+    case outlook
+    case socialEnergy
+    case planningStyle
+    case orderStyle
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .decisionStyle: "Heart or Head"
+        case .outlook: "Pessimist or Optimist"
+        case .socialEnergy: "Introvert or Extrovert"
+        case .planningStyle: "Planner or Spontaneous"
+        case .orderStyle: "Chaotic or Tidy"
+        }
+    }
+
+    var options: [String] {
+        switch self {
+        case .decisionStyle: ["Heart", "Head"]
+        case .outlook: ["Pessimist", "Optimist"]
+        case .socialEnergy: ["Introvert", "Extrovert"]
+        case .planningStyle: ["Planner", "Spontaneous"]
+        case .orderStyle: ["Chaotic", "Tidy"]
+        }
+    }
+
+    var displayLabel: String {
+        switch self {
+        case .decisionStyle: "Decisions"
+        case .outlook: "Outlook"
+        case .socialEnergy: "Social energy"
+        case .planningStyle: "Planning"
+        case .orderStyle: "Environment"
+        }
+    }
+}
+
+struct ProfileVibe: Equatable {
+    var decisionStyle = "Heart"
+    var outlook = "Optimist"
+    var socialEnergy = "Introvert"
+    var planningStyle = "Spontaneous"
+    var orderStyle = "Tidy"
+
+    var selectedValues: [String] {
+        VibeDimension.allCases.map { selection(for: $0) }
+    }
+
+    func selection(for dimension: VibeDimension) -> String {
+        switch dimension {
+        case .decisionStyle: decisionStyle
+        case .outlook: outlook
+        case .socialEnergy: socialEnergy
+        case .planningStyle: planningStyle
+        case .orderStyle: orderStyle
+        }
+    }
+
+    mutating func setSelection(_ value: String, for dimension: VibeDimension) {
+        switch dimension {
+        case .decisionStyle: decisionStyle = value
+        case .outlook: outlook = value
+        case .socialEnergy: socialEnergy = value
+        case .planningStyle: planningStyle = value
+        case .orderStyle: orderStyle = value
+        }
+    }
+}
+
 struct DemoUser {
     var name: String
     var age: Int
@@ -127,6 +199,18 @@ enum Weekday: String, CaseIterable, Identifiable {
         case .sunday: "Sunday"
         }
     }
+
+    var shortTitle: String {
+        switch self {
+        case .monday: "Mon"
+        case .tuesday: "Tue"
+        case .wednesday: "Wed"
+        case .thursday: "Thu"
+        case .friday: "Fri"
+        case .saturday: "Sat"
+        case .sunday: "Sun"
+        }
+    }
 }
 
 struct AvailabilityTimeSlot: Identifiable, Equatable {
@@ -148,6 +232,12 @@ struct AvailabilityTimeSlot: Identifiable, Equatable {
         let calendar = Calendar.current
         self.startTime = calendar.date(bySettingHour: startHour, minute: startMinute, second: 0, of: .now) ?? .now
         self.endTime = calendar.date(bySettingHour: endHour, minute: endMinute, second: 0, of: .now) ?? .now
+    }
+
+    var formattedRange: String {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return "\(formatter.string(from: startTime)) – \(formatter.string(from: endTime))"
     }
 }
 
@@ -217,7 +307,7 @@ final class DemoStore: ObservableObject {
     @Published var showPhotoEditor = false
     @Published var editingProfileSection: ProfileEditContext?
     @Published var editingQuestionSlot: QuestionEditContext?
-    @Published var vibeText = "Curious, warm, decisive"
+    @Published var profileVibe = ProfileVibe()
     @Published var aboutText = "Looking for intentional dates that feel easy, thoughtful, and a little cinematic."
     @Published var favoriteArtist = "Daft Punk"
     @Published var favoriteSong = "Get Lucky"
@@ -245,7 +335,7 @@ final class DemoStore: ObservableObject {
         name: "Chris",
         age: 29,
         city: "Hamburg",
-        vibe: "Curious, warm, decisive",
+        vibe: "Heart · Optimist · Introvert · Spontaneous · Tidy",
         bio: "Looking for intentional dates that feel easy, thoughtful, and a little cinematic.",
         interests: [],
         favoriteArtist: "Daft Punk",
@@ -413,21 +503,19 @@ final class DemoStore: ObservableObject {
         selectedExperienceIndex = 0
     }
 
-    func availabilitySlotIDs(for weekday: Weekday) -> [UUID] {
-        weeklyAvailability
-            .filter { $0.weekday == weekday }
-            .sorted { $0.startTime < $1.startTime }
-            .map(\.id)
+    func availabilitySlot(for weekday: Weekday) -> AvailabilityTimeSlot? {
+        weeklyAvailability.first { $0.weekday == weekday }
     }
 
     func addAvailabilitySlot(for weekday: Weekday) {
+        guard availabilitySlot(for: weekday) == nil else { return }
         weeklyAvailability.append(
             AvailabilityTimeSlot(weekday: weekday, startHour: 18, startMinute: 0, endHour: 20, endMinute: 0)
         )
     }
 
-    func removeAvailabilitySlot(id: UUID) {
-        weeklyAvailability.removeAll { $0.id == id }
+    func removeAvailabilitySlot(for weekday: Weekday) {
+        weeklyAvailability.removeAll { $0.weekday == weekday }
     }
 
     var hasEnoughSignal: Bool {
@@ -1740,81 +1828,192 @@ struct ChipPicker: View {
 struct WeeklyAvailabilityEditor: View {
     @EnvironmentObject private var store: DemoStore
     let locked: Bool
+    @State private var showEditSheet = false
 
     var body: some View {
-        VStack(spacing: 12) {
-            ForEach(Weekday.allCases) { weekday in
-                WeekdayAvailabilitySection(weekday: weekday, locked: locked)
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(spacing: 0) {
+                ForEach(Array(Weekday.allCases.enumerated()), id: \.element.id) { index, weekday in
+                    AvailabilitySummaryRow(weekday: weekday)
+
+                    if index < Weekday.allCases.count - 1 {
+                        Divider()
+                            .overlay(Color.white.opacity(0.08))
+                    }
+                }
             }
+            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+            if !locked {
+                Button {
+                    showEditSheet = true
+                } label: {
+                    Label("Edit availability", systemImage: "pencil")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(QTheme.electric)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .sheet(isPresented: $showEditSheet) {
+            WeeklyAvailabilityEditSheet()
+                .environmentObject(store)
         }
     }
 }
 
-struct WeekdayAvailabilitySection: View {
+struct AvailabilitySummaryRow: View {
     @EnvironmentObject private var store: DemoStore
     let weekday: Weekday
-    let locked: Bool
 
-    private var slotIDs: [UUID] {
-        store.availabilitySlotIDs(for: weekday)
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(weekday.title)
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 96, alignment: .leading)
+
+            if let slot = store.availabilitySlot(for: weekday) {
+                Text(slot.formattedRange)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                Spacer(minLength: 8)
+                Circle()
+                    .fill(QTheme.success)
+                    .frame(width: 8, height: 8)
+            } else {
+                Text("Unavailable")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(QTheme.muted)
+                Spacer(minLength: 8)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+    }
+}
+
+struct WeeklyAvailabilityEditSheet: View {
+    @EnvironmentObject private var store: DemoStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedWeekday: Weekday = .monday
+
+    private var selectedSlotIndex: Int? {
+        store.weeklyAvailability.firstIndex { $0.weekday == selectedWeekday }
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(weekday.title)
-                    .font(.system(size: 15, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-                Spacer()
-                if !locked {
-                    Button {
-                        withAnimation(.spring(response: 0.28, dampingFraction: 0.84)) {
-                            store.addAvailabilitySlot(for: weekday)
-                        }
-                    } label: {
-                        Label("Add slot", systemImage: "plus.circle.fill")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(QTheme.electric)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
+        ZStack {
+            AppBackground()
 
-            if slotIDs.isEmpty {
-                Text("No availability added")
-                    .font(.system(size: 13, weight: .medium))
+            VStack(alignment: .leading, spacing: 20) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Edit availability")
+                            .font(.system(size: 30, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                        Text("Choose a day, then add or update one time slot.")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(QTheme.muted)
+                    }
+                    Spacer()
+                    GlassIconButton(symbol: "xmark") {
+                        dismiss()
+                    }
+                }
+
+                Text("Select day")
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(QTheme.muted)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 4)
-            } else {
-                ForEach(slotIDs, id: \.self) { slotID in
-                    if let index = store.weeklyAvailability.firstIndex(where: { $0.id == slotID }) {
-                        AvailabilitySlotRow(
-                            startTime: $store.weeklyAvailability[index].startTime,
-                            endTime: $store.weeklyAvailability[index].endTime,
-                            locked: locked
-                        ) {
-                            withAnimation(.spring(response: 0.28, dampingFraction: 0.84)) {
-                                store.removeAvailabilitySlot(id: slotID)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(Weekday.allCases) { weekday in
+                            let isSelected = selectedWeekday == weekday
+                            let hasSlot = store.availabilitySlot(for: weekday) != nil
+
+                            Button {
+                                withAnimation(.spring(response: 0.28, dampingFraction: 0.84)) {
+                                    selectedWeekday = weekday
+                                }
+                            } label: {
+                                VStack(spacing: 6) {
+                                    Text(weekday.shortTitle)
+                                        .font(.system(size: 14, weight: .bold))
+                                    Circle()
+                                        .fill(hasSlot ? QTheme.success : Color.white.opacity(0.18))
+                                        .frame(width: 6, height: 6)
+                                }
+                                .foregroundStyle(.white)
+                                .frame(width: 52, height: 52)
+                                .background(isSelected ? QTheme.violet.opacity(0.55) : Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .stroke(Color.white.opacity(isSelected ? 0.34 : 0.10), lineWidth: 1)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+
+                GlassCard(cornerRadius: 22) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text(selectedWeekday.title)
+                            .font(.system(size: 22, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+
+                        if let index = selectedSlotIndex {
+                            AvailabilitySlotEditor(
+                                startTime: $store.weeklyAvailability[index].startTime,
+                                endTime: $store.weeklyAvailability[index].endTime
+                            )
+
+                            Button {
+                                withAnimation(.spring(response: 0.28, dampingFraction: 0.84)) {
+                                    store.removeAvailabilitySlot(for: selectedWeekday)
+                                }
+                            } label: {
+                                Label("Remove slot", systemImage: "trash")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundStyle(QTheme.warning)
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            Text("No availability set for this day.")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(QTheme.muted)
+
+                            GlassButton(title: "Add time slot", symbol: "plus.circle.fill", prominent: true) {
+                                withAnimation(.spring(response: 0.28, dampingFraction: 0.84)) {
+                                    store.addAvailabilitySlot(for: selectedWeekday)
+                                }
                             }
                         }
                     }
+                    .padding(18)
+                }
+
+                Spacer()
+
+                GlassButton(title: "Done", symbol: "checkmark", prominent: true) {
+                    dismiss()
                 }
             }
+            .padding(20)
         }
-        .padding(12)
-        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
-struct AvailabilitySlotRow: View {
+struct AvailabilitySlotEditor: View {
     @Binding var startTime: Date
     @Binding var endTime: Date
-    let locked: Bool
-    let onDelete: () -> Void
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 12) {
             HStack(spacing: 12) {
                 Text("Start")
                     .font(.system(size: 13, weight: .bold))
@@ -1824,7 +2023,6 @@ struct AvailabilitySlotRow: View {
                     .labelsHidden()
                     .datePickerStyle(.compact)
                     .tint(QTheme.electric)
-                    .disabled(locked)
                     .onChange(of: startTime) { _, newStart in
                         if endTime <= newStart {
                             endTime = Calendar.current.date(byAdding: .hour, value: 2, to: newStart) ?? newStart
@@ -1842,18 +2040,7 @@ struct AvailabilitySlotRow: View {
                     .labelsHidden()
                     .datePickerStyle(.compact)
                     .tint(QTheme.electric)
-                    .disabled(locked)
                 Spacer()
-            }
-
-            if !locked {
-                Button(action: onDelete) {
-                    Label("Remove slot", systemImage: "trash")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(QTheme.warning)
-                }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
         .padding(12)
@@ -1870,8 +2057,7 @@ struct ProfileScreen: View {
                 VStack(spacing: 18) {
                     ProfileHeader()
                     EditableProfileSection(title: "Vibe", editID: "vibe") {
-                        Text(store.vibeText)
-                            .profileText()
+                        VibeCardContent(vibe: store.profileVibe)
                     }
                     EditableProfileSection(title: "Favorites", editID: "favorites") {
                         FavoritesCardContent()
@@ -1971,6 +2157,49 @@ struct EditableProfileSection<Content: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(18)
         }
+    }
+}
+
+struct VibeCardContent: View {
+    let vibe: ProfileVibe
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(VibeDimension.allCases) { dimension in
+                FavoriteRow(label: dimension.displayLabel, value: vibe.selection(for: dimension))
+            }
+        }
+    }
+}
+
+struct VibeEditor: View {
+    @Binding var vibe: ProfileVibe
+
+    var body: some View {
+        VStack(spacing: 14) {
+            ForEach(VibeDimension.allCases) { dimension in
+                GlassCard(cornerRadius: 20) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(dimension.title)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(QTheme.muted)
+                        ChipPicker(
+                            options: dimension.options,
+                            selection: binding(for: dimension),
+                            locked: false
+                        )
+                    }
+                    .padding(16)
+                }
+            }
+        }
+    }
+
+    private func binding(for dimension: VibeDimension) -> Binding<String> {
+        Binding(
+            get: { vibe.selection(for: dimension) },
+            set: { vibe.setSelection($0, for: dimension) }
+        )
     }
 }
 
@@ -2539,7 +2768,7 @@ struct ProfileEditSheet: View {
     private var editorContent: some View {
         switch context.id {
         case "vibe":
-            GlassTextEditor(title: "Vibe", text: $store.vibeText, axis: .vertical)
+            VibeEditor(vibe: $store.profileVibe)
         case "about":
             GlassTextEditor(title: "About You", text: $store.aboutText, axis: .vertical)
         case "favorites":
