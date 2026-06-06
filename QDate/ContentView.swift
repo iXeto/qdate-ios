@@ -928,19 +928,13 @@ struct GlassHeader: View {
                     showHelp = true
                     Haptics.light()
                 } label: {
-                    Image(systemName: "questionmark")
-                        .font(.system(size: 17, weight: .black))
-                        .foregroundStyle(.white)
+                    Image(systemName: "questionmark.circle")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundStyle(QTheme.electric)
                         .frame(width: 44, height: 44)
                         .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
-                .glassEffect(.regular.interactive(), in: .circle)
-                .overlay {
-                    Circle()
-                        .strokeBorder(Color.white.opacity(0.16), lineWidth: 0.8)
-                        .allowsHitTesting(false)
-                }
                 .accessibilityLabel("QDate help")
             }
             .padding(.horizontal, 22)
@@ -1382,8 +1376,9 @@ struct ExperienceCard: View {
         .shadow(color: QTheme.violet.opacity(0.28), radius: 26, y: 18)
         .offset(dragOffset)
         .rotationEffect(.degrees(reduceMotion ? 0 : Double(dragOffset.width / 22)))
+        .contentShape(RoundedRectangle(cornerRadius: 34, style: .continuous))
         .gesture(
-            DragGesture()
+            DragGesture(minimumDistance: 12)
                 .onChanged { value in
                     guard isTop else { return }
                     dragOffset = CGSize(
@@ -1405,7 +1400,8 @@ struct ExperienceCard: View {
                             dragOffset = .zero
                         }
                     }
-                }
+                },
+            including: isTop ? .gesture : .subviews
         )
         .onChange(of: store.pendingButtonSwipe) { request in
             guard isTop, let request, request.experienceID == experience.id else { return }
@@ -2915,10 +2911,20 @@ struct ExperienceDetailSheet: View {
                         .fill(LinearGradient(colors: experience.colors, startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(height: 220)
                         .overlay {
-                            Image(systemName: experience.symbol)
-                                .font(.system(size: 96, weight: .thin))
-                                .foregroundStyle(.white.opacity(0.30))
+                            if let imageName = experience.backgroundImageName {
+                                Image(imageName)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                            } else {
+                                Image(systemName: experience.symbol)
+                                    .font(.system(size: 96, weight: .thin))
+                                    .foregroundStyle(.white.opacity(0.30))
+                            }
                         }
+                        .overlay {
+                            LinearGradient(colors: [.clear, .black.opacity(0.78)], startPoint: .top, endPoint: .bottom)
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
                         .overlay(alignment: .topTrailing) {
                             Text(experience.budget)
                                 .font(.system(size: 13, weight: .bold))
