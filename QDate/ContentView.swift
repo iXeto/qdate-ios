@@ -1382,13 +1382,17 @@ struct ExperienceCard: View {
             }
             .padding(22)
 
-            SwipeIndicator(title: "LIKE", color: QTheme.success, opacity: max(0, dragOffset.width / 120))
-                .rotationEffect(.degrees(-12))
-                .offset(x: 22, y: -(cardHeight - 90))
+            SwipeIndicator(title: "LIKE", systemImage: "heart.fill", color: QTheme.rose, opacity: max(0, dragOffset.width / 110))
+                .rotationEffect(.degrees(-10))
+                .padding(.leading, 24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                .offset(y: -(cardHeight * 0.12))
 
-            SwipeIndicator(title: "PASS", color: QTheme.warning, opacity: max(0, -dragOffset.width / 120))
-                .rotationEffect(.degrees(12))
-                .offset(x: 210, y: -(cardHeight - 90))
+            SwipeIndicator(title: "PASS", systemImage: "xmark", color: QTheme.warning, opacity: max(0, -dragOffset.width / 110))
+                .rotationEffect(.degrees(10))
+                .padding(.trailing, 24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                .offset(y: -(cardHeight * 0.12))
         }
         .frame(height: cardHeight)
         .clipShape(RoundedRectangle(cornerRadius: 34, style: .continuous))
@@ -1481,18 +1485,48 @@ struct SwipeActionButton: View {
 
 struct SwipeIndicator: View {
     let title: String
+    let systemImage: String
     let color: Color
     let opacity: Double
 
+    private var clamped: Double { min(1, max(0, opacity)) }
+
     var body: some View {
-        Text(title)
-            .font(.system(size: 28, weight: .black))
-            .foregroundStyle(color)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(color, lineWidth: 3))
-            .opacity(min(1, opacity))
-            .scaleEffect(0.92 + min(1, opacity) * 0.12)
+        HStack(spacing: 7) {
+            Image(systemName: systemImage)
+                .font(.system(size: 16, weight: .heavy))
+            Text(title)
+                .font(.system(size: 19, weight: .black, design: .rounded))
+                .tracking(1.6)
+        }
+        .foregroundStyle(.white)
+        .shadow(color: .black.opacity(0.28), radius: 2, y: 1)
+        .padding(.horizontal, 17)
+        .padding(.vertical, 10)
+        .background {
+            Capsule(style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    Capsule(style: .continuous)
+                        .fill(color.opacity(0.62))
+                }
+                .clipShape(Capsule(style: .continuous))
+        }
+        .overlay {
+            Capsule(style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [.white.opacity(0.85), .white.opacity(0.25)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1.4
+                )
+                .allowsHitTesting(false)
+        }
+        .shadow(color: .black.opacity(0.22), radius: 9, y: 5)
+        .opacity(clamped)
+        .scaleEffect(0.78 + clamped * 0.22)
     }
 }
 
