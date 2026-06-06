@@ -537,7 +537,12 @@ final class DemoStore: ObservableObject {
         selectedExperienceIndex = 0
     }
 
-    func resetSwipes() {
+    var isInMatchFlow: Bool {
+        stage != .activeSearch
+    }
+
+    private func resetToActiveSearch() {
+        showTimeCoordination = false
         withAnimation(.easeInOut(duration: 0.6)) {
             likedExperienceIDs.removeAll()
             dislikedExperienceIDs.removeAll()
@@ -547,7 +552,16 @@ final class DemoStore: ObservableObject {
             stage = .activeSearch
             selectedTimeSlotIDs.removeAll()
         }
+    }
+
+    func resetSwipes() {
+        resetToActiveSearch()
         Haptics.success()
+    }
+
+    func cancelMatch() {
+        resetToActiveSearch()
+        Haptics.light()
     }
 
     func availabilitySlot(for weekday: Weekday) -> AvailabilityTimeSlot? {
@@ -1065,6 +1079,22 @@ struct GlassTabBar: View {
     }
 }
 
+struct CancelMatchButton: View {
+    @EnvironmentObject private var store: DemoStore
+
+    var body: some View {
+        Button {
+            store.cancelMatch()
+        } label: {
+            Text("Cancel match")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(QTheme.muted.opacity(0.72))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Cancel match and start over")
+    }
+}
+
 struct HomeScreen: View {
     @EnvironmentObject private var store: DemoStore
 
@@ -1072,6 +1102,13 @@ struct HomeScreen: View {
         ScrollViewReader { proxy in
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 18) {
+                    if store.isInMatchFlow {
+                        HStack {
+                            Spacer()
+                            CancelMatchButton()
+                        }
+                    }
+
                     switch store.stage {
                     case .activeSearch:
                         ActiveSearchView {
@@ -2894,9 +2931,12 @@ struct TimeCoordinationSheet: View {
                             .foregroundStyle(QTheme.muted)
                     }
                     Spacer()
-                    GlassIconButton(symbol: "xmark") {
-                        store.showTimeCoordination = false
-                        dismiss()
+                    VStack(alignment: .trailing, spacing: 10) {
+                        GlassIconButton(symbol: "xmark") {
+                            store.showTimeCoordination = false
+                            dismiss()
+                        }
+                        CancelMatchButton()
                     }
                 }
 
