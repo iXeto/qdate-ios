@@ -425,6 +425,16 @@ final class DemoStore: ObservableObject {
 
     let experiences: [DateExperience] = [
         DateExperience(
+            id: "cafe-matcha",
+            title: "Matcha date at Café Love Story",
+            category: "Café meetup",
+            location: "Café Love Story",
+            budget: "Light",
+            description: "You meet at the cozy Café Love Story and start your RealMeet with matcha, coffee, or something sweet. Perfect to arrive relaxed, get to know each other, and enjoy the café vibe.",
+            symbol: "cup.and.saucer.fill",
+            colors: [Color(red: 0.78, green: 0.42, blue: 0.30), Color(red: 0.52, green: 0.18, blue: 0.42)]
+        ),
+        DateExperience(
             id: "jazz",
             title: "Listening Room",
             category: "Theatre",
@@ -502,6 +512,17 @@ final class DemoStore: ObservableObject {
         appliedBudgetTiers = budgetTiers
         appliedFilterCategories = categories
         selectedExperienceIndex = 0
+    }
+
+    func resetSwipes() {
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+            likedExperienceIDs.removeAll()
+            dislikedExperienceIDs.removeAll()
+            selectedExperienceIndex = 0
+            readinessScore = 42
+            stage = .activeSearch
+        }
+        Haptics.success()
     }
 
     func availabilitySlot(for weekday: Weekday) -> AvailabilityTimeSlot? {
@@ -831,10 +852,9 @@ struct GlassHeader: View {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("QDate")
-                        .font(.system(size: 32, weight: .black, design: .rounded))
-                        .tracking(-0.5)
-                        .foregroundStyle(QTheme.brandGradient)
-                        .shadow(color: QTheme.violet.opacity(0.45), radius: 12, x: 0, y: 3)
+                        .font(.system(size: 30, weight: .bold, design: .serif))
+                        .tracking(0.5)
+                        .foregroundStyle(QTheme.electric)
 
                     HStack(spacing: 5) {
                         Image(systemName: "location.fill")
@@ -977,8 +997,8 @@ struct GlassTabBar: View {
                     .background {
                         if selected {
                             Capsule(style: .continuous)
-                                .fill(QTheme.accentGradient)
-                                .shadow(color: QTheme.violet.opacity(0.55), radius: 12, y: 4)
+                                .fill(QTheme.violet)
+                                .shadow(color: QTheme.violet.opacity(0.45), radius: 10, y: 4)
                                 .matchedGeometryEffect(id: "activeTab", in: namespace)
                         }
                     }
@@ -1089,9 +1109,9 @@ struct ReadinessCard: View {
                     ZStack(alignment: .leading) {
                         Capsule().fill(Color.white.opacity(0.10))
                         Capsule()
-                            .fill(LinearGradient(colors: [QTheme.violet, QTheme.rose], startPoint: .leading, endPoint: .trailing))
+                            .fill(QTheme.violet)
                             .frame(width: proxy.size.width * max(0.04, store.readinessScore / 100))
-                            .shadow(color: QTheme.violet.opacity(0.55), radius: 12)
+                            .shadow(color: QTheme.violet.opacity(0.45), radius: 10)
                     }
                 }
                 .frame(height: 10)
@@ -1201,16 +1221,26 @@ struct ExperienceCard: View {
                 Spacer()
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(experience.title)
-                        .font(.system(size: 30, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
                     Text(experience.location)
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(QTheme.electric)
+                    Text(experience.title)
+                        .font(.system(size: 30, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
                     Text(experience.description)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.82))
+                        .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
+                    Button {
+                        store.showExperienceDetails = experience
+                    } label: {
+                        Text("See more")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(QTheme.electric)
+                    }
+                    .buttonStyle(.plain)
                 }
 
                 HStack(spacing: 12) {
@@ -2150,9 +2180,9 @@ struct ProfileHeader: View {
                 } label: {
                     ZStack {
                         Circle()
-                            .fill(LinearGradient(colors: [QTheme.violet, QTheme.rose], startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .fill(QTheme.violet)
                             .frame(width: 118, height: 118)
-                            .shadow(color: QTheme.violet.opacity(0.40), radius: 30, y: 12)
+                            .shadow(color: QTheme.violet.opacity(0.35), radius: 26, y: 12)
                         Image(systemName: "person.fill")
                             .font(.system(size: 46, weight: .semibold))
                             .foregroundStyle(.white)
@@ -2590,6 +2620,14 @@ struct FilterSheet: View {
         DateFilterCatalog.tiers.filter { draftBudgetTiers.contains($0) }
     }
 
+    private var swipeCount: Int {
+        store.likedExperienceIDs.count + store.dislikedExperienceIDs.count
+    }
+
+    private var hasSwipeProgress: Bool {
+        swipeCount > 0
+    }
+
     var body: some View {
         ZStack {
             AppBackground()
@@ -2651,6 +2689,38 @@ struct FilterSheet: View {
                 }
                 .opacity(isValid ? 1 : 0.45)
                 .disabled(!isValid)
+
+                Button {
+                    store.resetSwipes()
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "arrow.counterclockwise.circle.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Reset swipes")
+                                .font(.system(size: 15, weight: .bold))
+                            Text(hasSwipeProgress
+                                 ? "Clears your \(swipeCount) swiped ideas and starts fresh."
+                                 : "Clears swiped date ideas and starts fresh.")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(QTheme.muted)
+                        }
+                        Spacer()
+                    }
+                    .foregroundStyle(hasSwipeProgress ? .white : Color.white.opacity(0.55))
+                    .padding(.vertical, 14)
+                    .padding(.horizontal, 16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 18))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.14), lineWidth: 0.8)
+                        .allowsHitTesting(false)
+                }
+                .disabled(!hasSwipeProgress)
             }
             .padding(20)
         }
@@ -2667,28 +2737,54 @@ struct ExperienceDetailSheet: View {
     var body: some View {
         ZStack {
             AppBackground()
-            VStack(alignment: .leading, spacing: 18) {
-                RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .fill(LinearGradient(colors: experience.colors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(height: 210)
-                    .overlay {
-                        Image(systemName: experience.symbol)
-                            .font(.system(size: 90, weight: .thin))
-                            .foregroundStyle(.white.opacity(0.28))
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 18) {
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .fill(LinearGradient(colors: experience.colors, startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(height: 220)
+                        .overlay {
+                            Image(systemName: experience.symbol)
+                                .font(.system(size: 96, weight: .thin))
+                                .foregroundStyle(.white.opacity(0.30))
+                        }
+                        .overlay(alignment: .topTrailing) {
+                            Text(experience.budget)
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(.vertical, 7)
+                                .padding(.horizontal, 14)
+                                .glassEffect(.regular.tint(QTheme.glassTint.opacity(0.4)), in: .capsule)
+                                .padding(14)
+                        }
+
+                    VStack(alignment: .leading, spacing: 14) {
+                        Label(experience.category, systemImage: "sparkle")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.85))
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "mappin.and.ellipse")
+                                    .font(.system(size: 14, weight: .bold))
+                                Text(experience.location)
+                                    .font(.system(size: 16, weight: .bold))
+                            }
+                            .foregroundStyle(QTheme.electric)
+
+                            Text(experience.title)
+                                .font(.system(size: 32, weight: .black, design: .rounded))
+                                .foregroundStyle(.white)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        Text(experience.description)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(QTheme.muted)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                Text(experience.title)
-                    .font(.system(size: 32, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-                Text("\(experience.category) \(experience.location) \(experience.budget)")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(QTheme.electric)
-                Text(experience.description)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(QTheme.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer()
+                }
+                .padding(20)
             }
-            .padding(20)
         }
     }
 }
